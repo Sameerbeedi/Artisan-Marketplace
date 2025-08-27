@@ -9,10 +9,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Languages, Menu, X } from 'lucide-react';
+import { Languages, Menu, UserPlus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 const navLinks = [
   { href: '/marketplace', label: 'Marketplace' },
@@ -60,6 +61,13 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <div className='hidden md:flex'>
+            <Button asChild>
+              <Link href="/signup">Sign Up</Link>
+            </Button>
+          </div>
+          
+
           {/* Mobile Navigation */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -69,15 +77,17 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left">
-              <div className="flex flex-col gap-6 p-6">
-                <Link
-                  href="/"
-                  className="mr-6 flex items-center"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <KalaaVerseLogo className="h-8 w-auto" />
-                </Link>
-                <nav className="flex flex-col gap-4">
+              <div className="flex flex-col h-full">
+                <div className="p-6">
+                  <Link
+                    href="/"
+                    className="mr-6 flex items-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <KalaaVerseLogo className="h-8 w-auto" />
+                  </Link>
+                </div>
+                <nav className="flex flex-col gap-4 p-6 pt-0">
                   {navLinks.map((link) => (
                     <Link
                       key={link.href}
@@ -89,6 +99,15 @@ export function Header() {
                     </Link>
                   ))}
                 </nav>
+                <div className='mt-auto p-6'>
+                  <Separator className='mb-4'/>
+                  <Button asChild className='w-full'>
+                    <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
