@@ -21,6 +21,7 @@ import {
 import { ProductCard } from '@/components/product-card';
 import { products, artisans } from '@/lib/data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { FirebaseTest } from '@/components/firebase-test';
 
 export default function Home() {
   return (
@@ -61,7 +62,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="features" className="py-16 md:py-24 bg-background">
+      <section className="py-16 md:py-24 bg-background">
+        <div className="container mx-auto px-4">
+          <FirebaseTest />
+        </div>
+      </section>
+
+      <section id="features" className="py-16 md:py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-headline text-primary">
@@ -173,7 +180,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-secondary/50">
+      <section className="py-16 md:py-24 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-headline text-primary">
@@ -196,7 +203,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-background">
+      <section className="py-16 md:py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-headline text-primary">
