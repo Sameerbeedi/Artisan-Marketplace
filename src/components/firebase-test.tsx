@@ -18,7 +18,7 @@ export function FirebaseTest() {
       // This is a lightweight operation to check connectivity.
       // It attempts to get a document that doesn't exist.
       // We only care if the request succeeds or fails.
-      await getDoc(doc(db, '__test__', '__test__'));
+      await getDoc(doc(db, 'test-collection', 'test-doc'));
       setStatus('success');
     } catch (e: any) {
       setStatus('error');
