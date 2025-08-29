@@ -12,12 +12,10 @@ export class RecommendationService {
    * Get personalized product recommendations based on user input
    */
   static async getRecommendations(request: RecommendationRequest): Promise<RecommendationResponse> {
-    try {
-      // If userPrompt contains a price filter, extract and add to userPreferences
+      // Extract price range from user prompt and set in userPreferences for reliable filtering
       if (request.userPrompt) {
         const priceRange = extractPriceRange(request.userPrompt);
-        if (priceRange && typeof priceRange.min === 'number' && typeof priceRange.max === 'number') {
-          // Ensure userPreferences is a valid UserPreference object
+        if (priceRange && typeof priceRange.max === 'number') {
           request.userPreferences = request.userPreferences || {
             categories: [],
             priceRange: { min: 0, max: 100000 },
@@ -26,9 +24,14 @@ export class RecommendationService {
             colors: [],
             occasions: []
           };
-          request.userPreferences.priceRange = { min: priceRange.min, max: priceRange.max };
+          request.userPreferences.priceRange = {
+            min: typeof priceRange.min === 'number' ? priceRange.min : 0,
+            max: priceRange.max
+          };
         }
       }
+    try {
+  // Let the Gemini model interpret the user's prompt and extract price constraints
       const flowInput = {
         ...request,
         maxResults: request.maxResults || 5
