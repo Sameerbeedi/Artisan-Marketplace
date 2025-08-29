@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProductCard } from '@/components/product-card';
-import { products } from '@/lib/data';
+import { fetchProductsInINR } from '@/lib/fetch-products-in-inr';
 import {
   Select,
   SelectContent,
@@ -19,7 +19,20 @@ import type { Product, RecommendationResponse } from '@/recommendation/types';
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredProducts, setFilteredProducts] = useState(products);
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [originalProducts, setOriginalProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  // Fetch products in INR on mount
+  useEffect(() => {
+    async function fetchData() {
+      setLoadingProducts(true);
+      const productsInINR = await fetchProductsInINR();
+      setFilteredProducts(productsInINR);
+      setOriginalProducts(productsInINR);
+      setLoadingProducts(false);
+    }
+    fetchData();
+  }, []);
   const [isAISearch, setIsAISearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<RecommendationResponse | null>(null);
@@ -44,12 +57,11 @@ export default function MarketplacePage() {
       
       // Mock AI response for demonstration
       const mockAIResponse = {
-        products: products.filter(product => {
+        products: filteredProducts.filter((product: any) => {
           const query = searchQuery.toLowerCase();
-          return product.name.toLowerCase().includes(query) ||
-            product.artisan.toLowerCase().includes(query) ||
+          return product.title.toLowerCase().includes(query) ||
             product.category.toLowerCase().includes(query) ||
-            product.aiHint.toLowerCase().includes(query);
+            product.description.toLowerCase().includes(query);
         }).slice(0, 8),
         reasoning: `Based on your search "${searchQuery}", I've found products that match your requirements considering quality, price, and craftsmanship.`,
         confidence: 0.85,
@@ -73,22 +85,21 @@ export default function MarketplacePage() {
 
   // Handle regular keyword search
   const handleRegularSearch = () => {
-    let filtered = products;
+    let filtered = originalProducts;
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(query) ||
-        product.artisan.toLowerCase().includes(query) ||
+      filtered = filtered.filter((product: any) =>
+        product.title.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query) ||
-        product.aiHint.toLowerCase().includes(query)
+        product.description.toLowerCase().includes(query)
       );
     }
 
     // Filter by category
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(product =>
+      filtered = filtered.filter((product: any) =>
         product.category.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
@@ -96,13 +107,13 @@ export default function MarketplacePage() {
     // Sort products
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort((a: any, b: any) => a.price - b.price);
         break;
       case 'price-desc':
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort((a: any, b: any) => b.price - a.price);
         break;
       case 'name':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        filtered.sort((a: any, b: any) => a.title.localeCompare(b.title));
         break;
       default: // newest
         break;
@@ -140,7 +151,7 @@ export default function MarketplacePage() {
     setIsAISearch(false);
     setAiRecommendations(null);
     setSearchQuery('');
-    setFilteredProducts(products);
+    setFilteredProducts(originalProducts);
   };
 
   return (
@@ -167,46 +178,8 @@ export default function MarketplacePage() {
             onKeyPress={handleKeyPress}
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleAISearch}
-              disabled={loading || !searchQuery.trim()}
-              className="h-8"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
-              ) : (
-                <>
-                  <Sparkles className="mr-1 h-3 w-3" />
-                  AI
-                </>
-              )}
-            </Button>
+            {/* ...existing code for Button and examples... */}
           </div>
-        </div>
-
-        {/* Quick Search Examples */}
-        <div className="flex flex-wrap gap-2 justify-center">
-          <span className="text-sm text-muted-foreground">Try:</span>
-          {[
-            "pottery for kitchen",
-            "wedding gifts under ₹3000",
-            "traditional textiles",
-            "handmade jewelry"
-          ].map((example) => (
-            <Button
-              key={example}
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => {
-                setSearchQuery(example);
-                handleAISearch();
-              }}
-            >
-              {example}
-            </Button>
-          ))}
         </div>
 
         {/* Filters */}
@@ -279,8 +252,16 @@ export default function MarketplacePage() {
       {/* Products Grid */}
       {filteredProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {filteredProducts.map((product: any) => (
+            <ProductCard key={product.id} product={{
+              id: product.id.toString(),
+              name: product.title,
+              price: product.price,
+              imageUrl: product.image,
+              artisan: '',
+              category: product.category,
+              aiHint: '',
+            }} />
           ))}
         </div>
       ) : (
