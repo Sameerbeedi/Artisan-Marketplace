@@ -237,10 +237,10 @@ export default function MarketplacePage() {
         // Apply user's selected sorting preference
         switch (sortBy) {
           case 'price-asc':
-            filtered.sort((a, b) => a.price - b.price);
+            filtered.sort((a, b) => a.price - b.price); // Low to High
             break;
           case 'price-desc':
-            filtered.sort((a, b) => b.price - a.price);
+            filtered.sort((a, b) => b.price - a.price); // High to Low
             break;
           case 'name':
             filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -298,10 +298,10 @@ export default function MarketplacePage() {
     // Sort products
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a: any, b: any) => a.price - b.price);
+        filtered.sort((a: any, b: any) => a.price - b.price); // Low to High
         break;
       case 'price-desc':
-        filtered.sort((a: any, b: any) => b.price - a.price);
+        filtered.sort((a: any, b: any) => b.price - a.price); // High to Low
         break;
       case 'name':
         filtered.sort((a: any, b: any) => a.name.localeCompare(b.name));
@@ -336,6 +336,11 @@ export default function MarketplacePage() {
       handleRegularSearch();
     }
   }, [selectedCategory, sortBy, originalProducts, loadingProducts, isAISearch, loading]);
+
+  // Reset sort to "newest" when category changes
+  useEffect(() => {
+    setSortBy('newest');
+  }, [selectedCategory]);
 
   // Clear AI search
   const clearAISearch = () => {
@@ -434,7 +439,6 @@ export default function MarketplacePage() {
                 <SelectItem value="newest">Newest</SelectItem>
                 <SelectItem value="price-asc">Price: Low to High</SelectItem>
                 <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="name">Name A-Z</SelectItem>
               </SelectContent>
             </Select>
           </div>
