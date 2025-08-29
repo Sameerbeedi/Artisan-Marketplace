@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProductCard } from '@/components/product-card';
-import { fetchProductsInINR } from '@/lib/fetch-products-in-inr';
+import { products } from '@/lib/data';
 import {
   Select,
   SelectContent,
@@ -22,17 +22,33 @@ export default function MarketplacePage() {
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [originalProducts, setOriginalProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  // Fetch products in INR on mount
+  
+  // Use local products from data.ts
   useEffect(() => {
-    async function fetchData() {
-      setLoadingProducts(true);
-      const productsInINR = await fetchProductsInINR();
-      setFilteredProducts(productsInINR);
-      setOriginalProducts(productsInINR);
-      setLoadingProducts(false);
-    }
-    fetchData();
+    // Filter out any products with missing required fields
+    const validProducts = products.filter(product => 
+      product && 
+      product.id && 
+      product.name && 
+      product.price !== undefined &&
+      product.category &&
+      product.artisan
+    );
+    
+    console.log('Products loaded:', validProducts.length, 'Valid products from', products.length, 'total');
+    console.log('First product:', validProducts[0]);
+    
+    setOriginalProducts(validProducts);
+    setFilteredProducts(validProducts);
+    setLoadingProducts(false);
+    // Initial filter to ensure products show up
+    setTimeout(() => {
+      if (validProducts.length > 0) {
+        setFilteredProducts(validProducts);
+      }
+    }, 0);
   }, []);
+  
   const [isAISearch, setIsAISearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<RecommendationResponse | null>(null);
@@ -57,11 +73,11 @@ export default function MarketplacePage() {
       
       // Mock AI response for demonstration
       const mockAIResponse = {
-        products: filteredProducts.filter((product: any) => {
+        products: originalProducts.filter((product: any) => {
           const query = searchQuery.toLowerCase();
-          return product.title.toLowerCase().includes(query) ||
+          return product.name.toLowerCase().includes(query) ||
             product.category.toLowerCase().includes(query) ||
-            product.description.toLowerCase().includes(query);
+            product.artisan.toLowerCase().includes(query);
         }).slice(0, 8),
         reasoning: `Based on your search "${searchQuery}", I've found products that match your requirements considering quality, price, and craftsmanship.`,
         confidence: 0.85,
@@ -91,9 +107,9 @@ export default function MarketplacePage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((product: any) =>
-        product.title.toLowerCase().includes(query) ||
+        product.name.toLowerCase().includes(query) ||
         product.category.toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query)
+        product.artisan.toLowerCase().includes(query)
       );
     }
 
@@ -113,7 +129,7 @@ export default function MarketplacePage() {
         filtered.sort((a: any, b: any) => b.price - a.price);
         break;
       case 'name':
-        filtered.sort((a: any, b: any) => a.title.localeCompare(b.title));
+        filtered.sort((a: any, b: any) => a.name.localeCompare(b.name));
         break;
       default: // newest
         break;
@@ -141,10 +157,10 @@ export default function MarketplacePage() {
 
   // Effect for real-time filtering (non-AI search)
   useEffect(() => {
-    if (!isAISearch && !loading) {
+    if (!isAISearch && !loading && !loadingProducts && originalProducts.length > 0) {
       handleRegularSearch();
     }
-  }, [selectedCategory, sortBy]);
+  }, [selectedCategory, sortBy, originalProducts, loadingProducts, isAISearch, loading]);
 
   // Clear AI search
   const clearAISearch = () => {
@@ -196,6 +212,7 @@ export default function MarketplacePage() {
                 <SelectItem value="jewelry">Jewelry</SelectItem>
                 <SelectItem value="woodwork">Woodwork</SelectItem>
                 <SelectItem value="metalwork">Metalwork</SelectItem>
+                <SelectItem value="painting">Painting</SelectItem>
               </SelectContent>
             </Select>
             
