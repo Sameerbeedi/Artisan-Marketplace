@@ -103,7 +103,7 @@ export const personalizedRecommendationFlow = recommendationAI.defineFlow(
       prompt: userPrompt
     };
 
-    const prompt = `
+  const prompt = `
 You are an expert recommendation system for an artisan marketplace. Your task is to recommend products based on the user's request and preferences.
 
 USER REQUEST: "${userPrompt}"
@@ -114,6 +114,8 @@ USER HISTORY: ${userHistory ? userHistory.join(', ') : 'No previous purchases'}
 
 AVAILABLE PRODUCTS:
 ${JSON.stringify(productContext, null, 2)}
+
+IMPORTANT: If the user's request or preferences mention a price constraint (e.g., "under ₹6000", "below 5000 rupees", "budget of 3000 INR"), ONLY recommend products whose price is within that range. Do not include products above the specified price limit.
 
 Please analyze the user's request and recommend the top ${maxResults} products that best match their needs. Consider:
 
