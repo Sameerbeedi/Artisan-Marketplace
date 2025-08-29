@@ -229,9 +229,25 @@ export default function MarketplacePage() {
         console.log(`🎯 Category filter (${matchedCategory}): ${filtered.length} products`);
       }
 
-      // Sort by price (ascending for budget queries)
-      if (priceRange && priceRange.max !== Infinity) {
+      // Sort by price (ascending for budget queries, but respect user's sort preference)
+      if (priceRange && priceRange.max !== Infinity && sortBy === 'newest') {
+        // Only auto-sort by price if user hasn't selected a specific sort
         filtered.sort((a, b) => a.price - b.price);
+      } else {
+        // Apply user's selected sorting preference
+        switch (sortBy) {
+          case 'price-asc':
+            filtered.sort((a, b) => a.price - b.price);
+            break;
+          case 'price-desc':
+            filtered.sort((a, b) => b.price - a.price);
+            break;
+          case 'name':
+            filtered.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+          default: // newest - keep original order
+            break;
+        }
       }
 
       const response = {
