@@ -12,97 +12,56 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mic, Wand2 } from 'lucide-react';
-import { generateStoryAction } from '@/lib/actions';
+import { Loader2, Wand2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
-  artisanBackground: z
-    .string()
-    .min(10, 'Please tell us a bit about your background.'),
-  familyTraditions: z
-    .string()
-    .min(10, 'Please describe your family traditions related to the craft.'),
-  craftHistory: z
-    .string()
-    .min(10, 'Please share some history about your craft.'),
-  productDescription: z
-    .string()
-    .min(10, 'Please describe the product you want to feature.'),
+  productTitle: z.string().min(5, 'Please enter a product title.'),
+  productDescription: z.string().min(10, 'Please enter a product description.'),
 });
 
-// A simple hook for speech recognition
-function useSpeechRecognition(onResult: (transcript: string) => void) {
-  const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
-
-  useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recog = new SpeechRecognition();
-      recog.continuous = false;
-      recog.lang = 'en-US'; // Can be changed based on language switcher
-      recog.onstart = () => setIsListening(true);
-      recog.onend = () => setIsListening(false);
-      recog.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        onResult(transcript);
-      };
-      setRecognition(recog);
-    }
-  }, [onResult]);
-
-  const toggleListening = () => {
-    if (isListening) {
-      recognition?.stop();
-    } else {
-      recognition?.start();
-    }
-  };
-  
-  const isSupported = !!recognition;
-
-  return { isListening, toggleListening, isSupported };
+interface StoryResult {
+  creativeStory: string;
+  seoTags: string[];
 }
 
 export function StoryTool() {
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<StoryResult | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      artisanBackground: '',
-      familyTraditions: '',
-      craftHistory: '',
+      productTitle: '',
       productDescription: '',
     },
   });
-
-  const [activeField, setActiveField] = useState<keyof z.infer<typeof formSchema> | null>(null);
-
-  const { isListening, toggleListening, isSupported } = useSpeechRecognition((transcript) => {
-    if (activeField) {
-      const currentVal = form.getValues(activeField);
-      form.setValue(activeField, currentVal ? `${currentVal} ${transcript}`: transcript);
-    }
-  });
-
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await generateStoryAction(values);
-      if (response.error) {
-        throw new Error(response.error);
+      const response = await fetch('/api/generateStory', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate story.');
       }
-      setResult(response.data!.heritageStory);
+
+      const data: StoryResult = await response.json();
+      setResult(data);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -115,46 +74,41 @@ export function StoryTool() {
     }
   }
 
-  const renderTextarea = (name: keyof z.infer<typeof formSchema>, label: string, placeholder: string) => (
-    <FormField
-      control={form.control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <FormControl>
-            <div className="relative">
-              <Textarea placeholder={placeholder} {...field} onFocus={() => setActiveField(name)} />
-              {isSupported && (
-                <Button 
-                  type="button" 
-                  size="icon" 
-                  variant={isListening && activeField === name ? 'destructive' : 'ghost'}
-                  className="absolute bottom-2 right-2 h-7 w-7" 
-                  onClick={toggleListening}
-                  disabled={!isSupported || (isListening && activeField !== name)}
-                >
-                  <Mic className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  );
-  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
       <Card>
         <CardContent className="p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {renderTextarea('artisanBackground', 'Your Background', 'E.g., I am a third-generation weaver from Kanchipuram...')}
-              {renderTextarea('familyTraditions', 'Family Traditions', 'E.g., Our family has been dyeing silk with natural pigments...')}
-              {renderTextarea('craftHistory', 'Craft History', 'E.g., The art of Kalamkari in our village dates back to...')}
-              {renderTextarea('productDescription', 'Product Description', 'E.g., This saree features a traditional annapakshi motif...')}
+              <FormField
+                control={form.control}
+                name="productTitle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="E.g., Hand-carved Wooden Elephant" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="productDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="E.g., A beautiful decorative piece, crafted from sustainably sourced rosewood by artisans in Rajasthan."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
@@ -162,7 +116,7 @@ export function StoryTool() {
                 ) : (
                   <Wand2 className="mr-2 h-4 w-4" />
                 )}
-                Generate My Story
+                Generate Product Story
               </Button>
             </form>
           </Form>
@@ -181,12 +135,18 @@ export function StoryTool() {
           <Card className="w-full">
             <CardContent className="p-6">
               <h3 className="text-2xl font-headline text-primary mb-4">
-                Your Generated Heritage Story
+                Your Generated Product Story
               </h3>
               <div
-                className="prose prose-sm md:prose-base max-w-none prose-p:font-body"
-                dangerouslySetInnerHTML={{ __html: result.replace(/\n/g, '<br />') }}
+                className="prose prose-sm md:prose-base max-w-none prose-p:font-body mb-4"
+                dangerouslySetInnerHTML={{ __html: result.creativeStory.replace(/\n/g, '<br />') }}
               />
+              <h4 className="text-lg font-semibold text-primary mb-2">SEO Tags:</h4>
+              <div className="flex flex-wrap gap-2">
+                {result.seoTags.map((tag, index) => (
+                  <Badge key={index} variant="secondary">{tag}</Badge>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
