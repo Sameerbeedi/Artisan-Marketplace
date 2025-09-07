@@ -8,13 +8,11 @@ export default function StoryPage() {
         <div className="flex items-center gap-4">
           <Sparkles className="h-10 w-10 text-primary" />
           <h1 className="text-3xl md:text-4xl font-headline text-primary">
-            Heritage Story Generator
+            AI Product Storyteller
           </h1>
         </div>
         <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
-          Answer a few questions about your background, traditions, and craft.
-          Our AI will help you weave a compelling story that connects with your
-          customers.
+          Provide your product's title and a brief description. Our AI will craft a compelling story and suggest SEO tags to attract more customers.
         </p>
       </div>
       <StoryTool />
