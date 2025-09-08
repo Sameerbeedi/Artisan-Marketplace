@@ -27,6 +27,7 @@ Follow these steps to get your development environment set up and running.
    Navigate into your project directory in your terminal and run:
 
    ```bash
+   cd frontend
    npm install
    ```
 
