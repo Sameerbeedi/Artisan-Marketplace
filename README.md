@@ -90,14 +90,14 @@ Follow these steps to get your development environment set up and running.
 
 3. **Run the backend server**
 
-   ```bash
+   ```bash (on a separate terminal)
    python -m backend.main
    ```
 
-   By default, the FastAPI backend will start (usually on port 8000). You can access the API documentation at:
+   By default, the FastAPI backend will start (usually on port 9079). You can access the API documentation at:
 
    ```
-   http://localhost:8000/docs
+   http://localhost:9079/docs
    ```
 
 ---
