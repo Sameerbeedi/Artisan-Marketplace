@@ -90,7 +90,8 @@ Follow these steps to get your development environment set up and running.
 
 3. **Run the backend server**
 
-   ```bash (on a separate terminal)
+    On a separate terminal
+   ```bash 
    python -m backend.main
    ```
 
