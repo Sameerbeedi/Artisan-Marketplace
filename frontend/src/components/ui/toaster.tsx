@@ -11,24 +11,19 @@ import {
 } from "./toast"
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { messages } = useToast()   // ✅ get messages (array) from hook
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
+      {messages.map((msg, index) => (
+        <Toast key={index}>
+          <div className="grid gap-1">
+            <ToastTitle>Notification</ToastTitle>
+            <ToastDescription>{msg}</ToastDescription>
+          </div>
+          <ToastClose />
+        </Toast>
+      ))}
       <ToastViewport />
     </ToastProvider>
   )

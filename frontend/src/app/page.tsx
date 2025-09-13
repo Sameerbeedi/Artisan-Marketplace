@@ -1,6 +1,9 @@
-import { Button } from '../components/ui/button';
-import Link from 'next/link';
-import Image from 'next/image';
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "../components/ui/button";
+import Link from "next/link";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -8,7 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
+} from "../components/ui/card";
 import {
   Palette,
   Sparkles,
@@ -17,13 +20,29 @@ import {
   BookText,
   Workflow,
   Heart,
-} from 'lucide-react';
-import { ProductCard } from '../components/product-card';
-import { products, artisans } from '../lib/data';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { FirebaseTest } from '../components/firebase-test';
+} from "lucide-react";
+import { ProductCard } from "../components/product-card";
+import { products, artisans } from "../lib/data";
+import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { FirebaseTest } from "../components/firebase-test";
 
 export default function Home() {
+  const [backendData, setBackendData] = useState<string>("Loading...");
+
+  useEffect(() => {
+    // Call your Python FastAPI backend
+    fetch("http://localhost:9079/") // adjust endpoint if needed (e.g., /api/v1/health)
+      .then((res) => res.json())
+      .then((data) => {
+        // Backend should return JSON
+        setBackendData(JSON.stringify(data));
+      })
+      .catch((err) => {
+        console.error(err);
+        setBackendData("Error connecting to backend");
+      });
+  }, []);
+
   return (
     <div className="flex flex-col">
       <section className="relative h-[60vh] md:h-[80vh] w-full">
@@ -65,6 +84,12 @@ export default function Home() {
       <section className="py-16 md:py-24 bg-background">
         <div className="container mx-auto px-4">
           <FirebaseTest />
+          <div className="mt-8 p-6 border rounded-lg shadow bg-white">
+            <h2 className="text-xl font-semibold mb-2">Backend Data</h2>
+            <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+              {backendData}
+            </pre>
+          </div>
         </div>
       </section>
     </div>
