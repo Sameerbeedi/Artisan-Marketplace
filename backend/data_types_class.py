@@ -89,12 +89,15 @@ class PriceRange(BaseModel):
     max: float
 
 class UserPreferences(BaseModel):
-    categories: Optional[List[str]] = None
-    priceRange: Optional[PriceRange] = None
-    preferredArtisans: Optional[List[str]] = None
-    styles: Optional[List[str]] = None
-    colors: Optional[List[str]] = None
-    occasions: Optional[List[str]] = None
+    categories: List[str] = []
+    priceRange: PriceRange = Field(default_factory=lambda: PriceRange(min=0, max=100000))
+    preferredArtisans: List[str] = []
+    styles: List[str] = []
+    colors: List[str] = []
+    occasions: List[str] = []
+
+# For backwards compatibility
+UserPreference = UserPreferences
 
 class RecommendationRequest(BaseModel):
     userPrompt: str
@@ -105,46 +108,7 @@ class RecommendationRequest(BaseModel):
 
 
 # ------------------------
-# Output Schemas
-# ------------------------
-class RecommendedProduct(BaseModel):
-    id: str
-    name: str
-    price: float
-    imageUrl: str
-    artisan: str
-    category: str
-    aiHint: str
-    relevanceScore: float = Field(..., ge=0, le=1)
-
-class SuggestedFilters(BaseModel):
-    priceRange: Optional[PriceRange] = None
-    categories: Optional[List[str]] = None
-    artisans: Optional[List[str]] = None
-
-class RecommendationResponse(BaseModel):
-    products: List[RecommendedProduct]
-    reasoning: str
-    confidence: float = Field(..., ge=0, le=1)
-    categories: List[str]
-    suggestedFilters: Optional[SuggestedFilters] = None
-
-class PriceRange(BaseModel):
-    min: float
-    max: float
-
-
-class UserPreference(BaseModel):
-    categories: List[str]
-    priceRange: PriceRange
-    preferredArtisans: List[str]
-    styles: List[str]
-    colors: List[str]
-    occasions: List[str]
-
-
-# ------------------------
-# Product Model
+# Output Schemas - SINGLE DEFINITIONS ONLY
 # ------------------------
 class Product(BaseModel):
     id: str
@@ -161,29 +125,17 @@ class Product(BaseModel):
     region: Optional[str] = None
     rating: Optional[float] = None
     availability: Optional[bool] = None
-
-
-# ------------------------
-# Recommendation Request/Response Models
-# ------------------------
-class RecommendationRequest(BaseModel):
-    userPrompt: str
-    userPreferences: Optional[UserPreference] = None
-    userHistory: Optional[List[str]] = None
-    maxResults: Optional[int] = None
-    excludeProducts: Optional[List[str]] = None
-
+    relevanceScore: Optional[float] = Field(default=0.0, ge=0, le=1)
 
 class SuggestedFilters(BaseModel):
     priceRange: Optional[PriceRange] = None
     categories: Optional[List[str]] = None
     artisans: Optional[List[str]] = None
 
-
 class RecommendationResponse(BaseModel):
     products: List[Product]
     reasoning: str
-    confidence: float
+    confidence: float = Field(..., ge=0, le=1)
     categories: List[str]
     suggestedFilters: Optional[SuggestedFilters] = None
 

@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 from backend.src.recommendation.price_parser import extract_price_range
-from backend.data_types_class import personalized_recommendation_flow
-from types import RecommendationRequest, RecommendationResponse, UserProfile, UserPreference
+from backend.data_types_class import RecommendationRequest, RecommendationResponse, UserProfile, UserPreference, PriceRange
 
 class RecommendationService:
     @staticmethod
@@ -13,23 +12,24 @@ class RecommendationService:
                 if not request.userPreferences:
                     request.userPreferences = UserPreference(
                         categories=[],
-                        priceRange={"min": 0, "max": 100000},
+                        priceRange=PriceRange(min=0, max=100000),
                         preferredArtisans=[],
                         styles=[],
                         colors=[],
                         occasions=[]
                     )
-                request.userPreferences.priceRange = {
-                    "min": price_range.get("min", 0),
-                    "max": price_range["max"]
-                }
+                request.userPreferences.priceRange = PriceRange(
+                    min=price_range.get("min", 0),
+                    max=price_range["max"]
+                )
 
         try:
-            flow_input = {
-                **request.__dict__,
-                "maxResults": request.maxResults or 5
-            }
-            result = await personalized_recommendation_flow(flow_input)
+            # For now, delegate to the routes.py implementation
+            # In a real system, this would call your AI recommendation engine
+            from backend.routes import personalized_recommendation
+            
+            # Create a mock request object for routes.py
+            result = await personalized_recommendation(request)
             return result
         except Exception as e:
             print("Error getting recommendations:", e)
@@ -60,7 +60,7 @@ class RecommendationService:
             userPrompt=user_prompt,
             userPreferences=UserPreference(
                 categories=[category],
-                priceRange={"min": 0, "max": 100000},
+                priceRange=PriceRange(min=0, max=100000),
                 preferredArtisans=[],
                 styles=[],
                 colors=[],
@@ -77,7 +77,7 @@ class RecommendationService:
             userPrompt=user_prompt,
             userPreferences=UserPreference(
                 categories=[],
-                priceRange={"min": min_price, "max": max_price},
+                priceRange=PriceRange(min=min_price, max=max_price),
                 preferredArtisans=[],
                 styles=[],
                 colors=[],
@@ -108,7 +108,7 @@ class RecommendationService:
             userPrompt=user_prompt,
             userPreferences=UserPreference(
                 categories=[],
-                priceRange=price_range or {"min": 0, "max": 100000},
+                priceRange=PriceRange(**price_range) if price_range else PriceRange(min=0, max=100000),
                 preferredArtisans=[],
                 styles=[],
                 colors=[],
