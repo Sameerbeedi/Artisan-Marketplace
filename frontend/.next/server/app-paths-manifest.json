@@ -1,0 +1,8 @@
+{
+  "/api/generateStory/route": "app/api/generateStory/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js",
+  "/signup/page": "app/signup/page.js",
+  "/tools/page": "app/tools/page.js",
+  "/tools/story/page": "app/tools/story/page.js"
+}

@@ -1,0 +1,23 @@
+{
+  "app": {
+    "[project]/src/app/page": [
+      "static/media/4UaBrEBBsBhlBjvfkSLhx6jj4JN0-s.p.52c363ec.woff2",
+      "static/media/0nkoC9_pNeMfhX4BhcH4ai7oqP4-s.p.b1a9b35e.woff2"
+    ],
+    "[project]/src/app/signup/page": [
+      "static/media/4UaBrEBBsBhlBjvfkSLhx6jj4JN0-s.p.52c363ec.woff2",
+      "static/media/0nkoC9_pNeMfhX4BhcH4ai7oqP4-s.p.b1a9b35e.woff2"
+    ],
+    "[project]/src/app/tools/page": [
+      "static/media/4UaBrEBBsBhlBjvfkSLhx6jj4JN0-s.p.52c363ec.woff2",
+      "static/media/0nkoC9_pNeMfhX4BhcH4ai7oqP4-s.p.b1a9b35e.woff2"
+    ],
+    "[project]/src/app/tools/story/page": [
+      "static/media/4UaBrEBBsBhlBjvfkSLhx6jj4JN0-s.p.52c363ec.woff2",
+      "static/media/0nkoC9_pNeMfhX4BhcH4ai7oqP4-s.p.b1a9b35e.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

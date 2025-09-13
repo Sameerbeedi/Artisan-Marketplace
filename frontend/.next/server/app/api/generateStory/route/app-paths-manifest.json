@@ -1,0 +1,3 @@
+{
+  "/api/generateStory/route": "app/api/generateStory/route.js"
+}
