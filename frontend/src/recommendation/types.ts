@@ -42,6 +42,7 @@ export interface RecommendationRequest {
 export interface SuggestedFilters {
   priceRange?: PriceRange;
   categories?: string[];
+  priceRanges?: string[];
   artisans?: string[];
 }
 

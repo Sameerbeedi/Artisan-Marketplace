@@ -107,162 +107,55 @@ export default function MarketplacePage() {
 
     console.log('🚀 AI Search triggered!');
     console.log('🔍 Search query:', searchQuery);
-    console.log('📦 originalProducts at search time:', originalProducts?.length || 0);
-    console.log('� Sample originalProduct:', originalProducts[0]);
 
     setLoading(true);
     setIsAISearch(true);
     
     try {
-      // Typo correction and fuzzy matching
-      function correctTypos(text: string) {
-        const corrections: { [key: string]: string } = {
-          'woowork': 'woodwork',
-          'woodowrk': 'woodwork',
-          'wooodwork': 'woodwork',
-          'woodwrok': 'woodwork',
-          'poterry': 'pottery',
-          'potery': 'pottery',
-          'pottry': 'pottery',
-          'textils': 'textiles',
-          'textiles': 'textiles',
-          'jewlery': 'jewelry',
-          'jewelery': 'jewelry',
-          'jewellry': 'jewelry',
-          'metalowrk': 'metalwork',
-          'mettalwork': 'metalwork',
-          'paintng': 'painting',
-          'paiting': 'painting',
-          'paintintg': 'painting'
-        };
-        
-        let corrected = text.toLowerCase();
-        for (const [typo, correct] of Object.entries(corrections)) {
-          corrected = corrected.replace(new RegExp(typo, 'gi'), correct);
+      // Use the enhanced AI recommendation API with fuzzy logic
+      const response = await RecommendationAPIClient.getRecommendations({
+        userPrompt: searchQuery,
+        maxResults: 50, // Get all relevant results
+        userPreferences: {
+          categories: [],
+          priceRange: { min: 0, max: 100000 },
+          preferredArtisans: [],
+          styles: [],
+          colors: [],
+          occasions: []
         }
-        return corrected;
+      });
+
+      console.log('🤖 AI Response:', response);
+      
+      // Apply user's selected sorting preference to the AI results
+      let sortedProducts = [...response.products];
+      switch (sortBy) {
+        case 'price-asc':
+          console.log('🤖🔼 AI: Sorting Low to High (price-asc)');
+          sortedProducts.sort((a, b) => b.price - a.price); // Actually High to Low (fixed)
+          console.log('AI: First 3 prices after sorting:', sortedProducts.slice(0, 3).map(p => p.price));
+          break;
+        case 'price-desc':
+          console.log('🤖🔽 AI: Sorting High to Low (price-desc)');
+          sortedProducts.sort((a, b) => a.price - b.price); // Actually Low to High (fixed)
+          console.log('AI: First 3 prices after sorting:', sortedProducts.slice(0, 3).map(p => p.price));
+          break;
+        case 'name':
+          sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        default: // newest - keep AI's relevance-based order
+          break;
       }
 
-      // Extract price range from query
-      function extractPriceRange(query: string) {
-        const patterns = [
-          { regex: /(under|below|less\s+than)\s+(?:₹|rs\.?|rupees?\s+)?(\d+(?:,\d{3})*)/i, type: 'under' },
-          { regex: /(above|over|more\s+than|greater\s+than)\s+(?:₹|rs\.?|rupees?\s+)?(\d+(?:,\d{3})*)/i, type: 'above' },
-          { regex: /between\s+(?:₹|rs\.?|rupees?\s+)?(\d+(?:,\d{3})*)\s+(?:and|to|-)\s+(?:₹|rs\.?|rupees?\s+)?(\d+(?:,\d{3})*)/i, type: 'between' }
-        ];
-        
-        for (const pattern of patterns) {
-          const match = query.match(pattern.regex);
-          if (match) {
-            const parseNumber = (str: string) => parseInt(str.replace(/,/g, ''), 10);
-            if (pattern.type === 'under') {
-              return { min: 0, max: parseNumber(match[2]) };
-            } else if (pattern.type === 'above') {
-              return { min: parseNumber(match[2]), max: Infinity };
-            } else if (pattern.type === 'between') {
-              return { min: parseNumber(match[2]), max: parseNumber(match[3]) };
-            }
-          }
-        }
-        return null;
-      }
-
-      // Start with all products
-      let filtered = [...originalProducts];
-      
-      // Apply typo correction to search query
-      const correctedQuery = correctTypos(searchQuery);
-      console.log(`🔧 Original: "${searchQuery}" → Corrected: "${correctedQuery}"`);
-      
-      // Apply price filtering
-      const priceRange = extractPriceRange(correctedQuery);
-      if (priceRange) {
-        filtered = filtered.filter(p => p.price >= priceRange.min && p.price <= priceRange.max);
-        console.log(`💰 Price filter (${priceRange.min} - ${priceRange.max}): ${filtered.length} products`);
-      }
-
-      // Apply category filtering with fuzzy matching
-      const query = correctedQuery.toLowerCase();
-      const categories = ['pottery', 'textiles', 'jewelry', 'woodwork', 'metalwork', 'painting'];
-      
-      // Try exact match first, then fuzzy match
-      let matchedCategory = categories.find(cat => query.includes(cat));
-      
-      // If no exact match, try fuzzy matching with Levenshtein distance
-      if (!matchedCategory) {
-        function levenshteinDistance(a: string, b: string): number {
-          const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-          for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
-          for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
-          for (let j = 1; j <= b.length; j++) {
-            for (let i = 1; i <= a.length; i++) {
-              const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-              matrix[j][i] = Math.min(
-                matrix[j][i - 1] + 1,
-                matrix[j - 1][i] + 1,
-                matrix[j - 1][i - 1] + cost
-              );
-            }
-          }
-          return matrix[b.length][a.length];
-        }
-        
-        // Find closest category with distance <= 2
-        const queryWords = query.split(' ');
-        for (const word of queryWords) {
-          if (word.length >= 4) { // Only check words with 4+ characters
-            for (const cat of categories) {
-              const distance = levenshteinDistance(word, cat);
-              if (distance <= 2 && word.length >= cat.length - 2) {
-                matchedCategory = cat;
-                console.log(`🎯 Fuzzy match: "${word}" → "${cat}" (distance: ${distance})`);
-                break;
-              }
-            }
-            if (matchedCategory) break;
-          }
-        }
-      }
-      
-      if (matchedCategory) {
-        filtered = filtered.filter(p => p.category.toLowerCase().includes(matchedCategory!));
-        console.log(`🎯 Category filter (${matchedCategory}): ${filtered.length} products`);
-      }
-
-      // Sort by price (ascending for budget queries, but respect user's sort preference)
-      if (priceRange && priceRange.max !== Infinity && sortBy === 'newest') {
-        // Only auto-sort by price if user hasn't selected a specific sort
-        filtered.sort((a, b) => a.price - b.price);
-      } else {
-        // Apply user's selected sorting preference
-        switch (sortBy) {
-          case 'price-asc':
-            filtered.sort((a, b) => a.price - b.price); // Low to High
-            break;
-          case 'price-desc':
-            filtered.sort((a, b) => b.price - a.price); // High to Low
-            break;
-          case 'name':
-            filtered.sort((a, b) => a.name.localeCompare(b.name));
-            break;
-          default: // newest - keep original order
-            break;
-        }
-      }
-
-      const response = {
-        products: filtered,
-        reasoning: filtered.length > 0 
-          ? `Found ${filtered.length} products matching "${searchQuery}"${correctedQuery !== searchQuery ? ` (corrected from "${searchQuery}" to "${correctedQuery}")` : ''}${priceRange ? ` with price range ₹${priceRange.min}-${priceRange.max === Infinity ? '∞' : priceRange.max}` : ''}${matchedCategory ? ` in ${matchedCategory}` : ''}`
-          : `No products found matching "${searchQuery}". ${correctedQuery !== searchQuery ? `Did you mean "${correctedQuery}"? ` : ''}Try browsing our categories below.`,
-        confidence: 0.95,
-        categories: matchedCategory ? [matchedCategory] : categories,
-        suggestedFilters: { categories: categories }
+      const enhancedResponse = {
+        ...response,
+        products: sortedProducts
       };
       
-      console.log('📤 Setting AI recommendations:', response);
-      setAiRecommendations(response);
-      setFilteredProducts(response.products);
+      console.log('📤 Setting AI recommendations:', enhancedResponse);
+      setAiRecommendations(enhancedResponse);
+      setFilteredProducts(enhancedResponse.products);
       
     } catch (error) {
       console.error('❌ AI search failed:', error);
@@ -298,10 +191,14 @@ export default function MarketplacePage() {
     // Sort products
     switch (sortBy) {
       case 'price-asc':
-        filtered.sort((a: any, b: any) => a.price - b.price); // Low to High
+        console.log('🔼 Sorting Low to High (price-asc)');
+        filtered.sort((a: any, b: any) => b.price - a.price); // Actually High to Low (fixed)
+        console.log('First 3 prices after sorting:', filtered.slice(0, 3).map(p => p.price));
         break;
       case 'price-desc':
-        filtered.sort((a: any, b: any) => b.price - a.price); // High to Low
+        console.log('🔽 Sorting High to Low (price-desc)');
+        filtered.sort((a: any, b: any) => a.price - b.price); // Actually Low to High (fixed)
+        console.log('First 3 prices after sorting:', filtered.slice(0, 3).map(p => p.price));
         break;
       case 'name':
         filtered.sort((a: any, b: any) => a.name.localeCompare(b.name));
@@ -337,9 +234,15 @@ export default function MarketplacePage() {
     }
   }, [selectedCategory, sortBy, originalProducts, loadingProducts, isAISearch, loading]);
 
-  // Reset sort to "newest" when category changes
+  // Reset sort to "newest" when category changes and clear AI search
   useEffect(() => {
     setSortBy('newest');
+    // Clear AI search when category changes
+    if (isAISearch) {
+      setIsAISearch(false);
+      setAiRecommendations(null);
+      setSearchQuery('');
+    }
   }, [selectedCategory]);
 
   // Clear AI search
@@ -368,7 +271,7 @@ export default function MarketplacePage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
             placeholder="Type product name or describe what you're looking for (e.g., 'woodwork greater than ₹1000')" 
-            className="pl-10 pr-20 h-12 text-base"
+            className="pl-10 pr-24 h-12 text-base"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -409,7 +312,24 @@ export default function MarketplacePage() {
           )}
           
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-            {/* ...existing code for Button and examples... */}
+            <Button 
+              size="sm" 
+              onClick={handleAISearch}
+              disabled={!searchQuery.trim() || loading}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 h-8"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full mr-2"></div>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3 mr-2" />
+                  Search
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -446,11 +366,22 @@ export default function MarketplacePage() {
       </div>
 
       {/* Results */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Showing {filteredProducts.length} products
           {isAISearch && aiRecommendations && " based on AI recommendations"}
         </p>
+        {isAISearch && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={clearAISearch}
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            Clear Search
+          </Button>
+        )}
       </div>
 
       {/* Products Grid */}
