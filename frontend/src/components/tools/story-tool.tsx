@@ -21,13 +21,19 @@ import { Loader2, Wand2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
 const formSchema = z.object({
-  productTitle: z.string().min(5, 'Please enter a product title.'),
-  productDescription: z.string().min(10, 'Please enter a product description.'),
+  productTitle: z.string().min(3, 'Please enter a product title.'),
+  productDescription: z.string().min(5, 'Please enter a product description.'),
+  materials: z.string().min(2, 'Please enter materials used.'),
+  artisan_hours: z.coerce.number().min(1, 'Enter valid artisan hours'),
+  state: z.string().min(2, 'Please select a state.'),
 });
 
 interface StoryResult {
   creativeStory: string;
   seoTags: string[];
+  minPrice: number;
+  maxPrice: number;
+  reasoning: string;
 }
 
 export function StoryTool() {
@@ -40,6 +46,9 @@ export function StoryTool() {
     defaultValues: {
       productTitle: '',
       productDescription: '',
+      materials: '',
+      artisan_hours: 1,
+      state: '',
     },
   });
 
@@ -47,21 +56,39 @@ export function StoryTool() {
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await fetch('/api/generateStory', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
+      // Run both APIs in parallel
+      const [storyRes, priceRes] = await Promise.all([
+        fetch('/api/generateStory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values), // send full form for story
+        }),
+        fetch('/api/estimatePrice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: values.productTitle,       // map correctly
+            materials: values.materials,
+            artisan_hours: values.artisan_hours,
+            state: values.state,
+          }),
+        }),
+      ]);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate story.');
+      if (!storyRes.ok || !priceRes.ok) {
+        throw new Error('Failed to fetch story or price.');
       }
 
-      const data: StoryResult = await response.json();
-      setResult(data);
+      const storyData = await storyRes.json();
+      const priceData = await priceRes.json();
+
+      setResult({
+        creativeStory: storyData.creativeStory,
+        seoTags: storyData.seoTags,
+        minPrice: priceData.minPrice,
+        maxPrice: priceData.maxPrice,
+        reasoning: priceData.reasoning,
+      });
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -76,6 +103,7 @@ export function StoryTool() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+      {/* Input Form */}
       <Card>
         <CardContent className="p-6">
           <Form {...form}>
@@ -101,9 +129,48 @@ export function StoryTool() {
                     <FormLabel>Product Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="E.g., A beautiful decorative piece, crafted from sustainably sourced rosewood by artisans in Rajasthan."
+                        placeholder="E.g., A decorative piece crafted from sustainably sourced wood."
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="materials"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Materials Used</FormLabel>
+                    <FormControl>
+                      <Input placeholder="E.g., Clay, Natural Dye" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="artisan_hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Artisan Hours</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="E.g., 12" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State (India)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="E.g., Karnataka" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -116,37 +183,44 @@ export function StoryTool() {
                 ) : (
                   <Wand2 className="mr-2 h-4 w-4" />
                 )}
-                Generate Product Story
+                Generate Story + Price
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
+
+      {/* Results */}
       <div className="flex items-start justify-center">
         {isLoading && (
           <div className="text-center mt-10">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">
-              AI is crafting your story...
-            </p>
+            <p className="mt-4 text-muted-foreground">AI is generating...</p>
           </div>
         )}
         {result && (
           <Card className="w-full">
             <CardContent className="p-6">
               <h3 className="text-2xl font-headline text-primary mb-4">
-                Your Generated Product Story
+                Generated Product Story
               </h3>
               <div
                 className="prose prose-sm md:prose-base max-w-none prose-p:font-body mb-4"
-                dangerouslySetInnerHTML={{ __html: result.creativeStory.replace(/\n/g, '<br />') }}
+                dangerouslySetInnerHTML={{
+                  __html: result.creativeStory.replace(/\n/g, '<br />'),
+                }}
               />
               <h4 className="text-lg font-semibold text-primary mb-2">SEO Tags:</h4>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {result.seoTags.map((tag, index) => (
                   <Badge key={index} variant="secondary">{tag}</Badge>
                 ))}
               </div>
+              <h4 className="text-lg font-semibold text-primary mb-2">Estimated Price Range:</h4>
+              <p className="text-green-600 font-bold">
+                ₹{result.minPrice} – ₹{result.maxPrice}
+              </p>
+              <p className="mt-2 text-muted-foreground">{result.reasoning}</p>
             </CardContent>
           </Card>
         )}

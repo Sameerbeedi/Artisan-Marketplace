@@ -1,4 +1,3 @@
-# routes.py
 from fastapi import APIRouter
 import httpx
 from typing import List
@@ -9,7 +8,8 @@ from backend.data_types_class import (
     ProductStorytellingInput, ProductStorytellingOutput,
     AnalyzeProductPhotoInput, AnalyzeProductPhotoOutput,
     IdentifyTechniqueInput, IdentifyTechniqueOutput,
-    RecommendationRequest, RecommendationResponse
+    RecommendationRequest, RecommendationResponse,
+    PriceEstimationInput, PriceEstimationOutput
 )
 from backend.src.ai.flows.automated_product_catalog import catalog_product
 from backend.src.ai.flows.heritage_storytelling import generate_heritage_story
@@ -17,42 +17,45 @@ from backend.src.ai.flows.process_documentation import generate_process_document
 from backend.src.ai.flows.product_storytelling import generate_product_story
 from backend.src.ai.flows.quality_assessment import analyze_product_photo
 from backend.src.ai.flows.technique_identification import identify_technique
+from backend.src.ai.flows.price_estimation import generate_price_estimation
 from backend.src.lib.data import Products as products
-
 
 router = APIRouter()
 
-
+# ------------------------
+# AI Flows
+# ------------------------
 @router.post("/catalog_product", response_model=CatalogProductOutput)
 async def catalog_product_endpoint(input: CatalogProductInput):
     return await catalog_product(input)
-
 
 @router.post("/generate_heritage_story", response_model=HeritageStorytellingOutput)
 async def generate_heritage_story_endpoint(input: HeritageStorytellingInput):
     return await generate_heritage_story(input)
 
-
 @router.post("/generate_process_documentation", response_model=GenerateProcessDocumentationOutput)
 async def generate_process_documentation_endpoint(input: GenerateProcessDocumentationInput):
     return await generate_process_documentation(input)
-
 
 @router.post("/generate_product_story", response_model=ProductStorytellingOutput)
 async def generate_product_story_endpoint(input: ProductStorytellingInput):
     return await generate_product_story(input)
 
-
 @router.post("/analyze_product_photo", response_model=AnalyzeProductPhotoOutput)
 async def analyze_product_photo_endpoint(input: AnalyzeProductPhotoInput):
     return await analyze_product_photo(input)
-
 
 @router.post("/identify_technique", response_model=IdentifyTechniqueOutput)
 async def identify_technique_endpoint(input: IdentifyTechniqueInput):
     return await identify_technique(input)
 
+@router.post("/estimate_price", response_model=PriceEstimationOutput)
+async def estimate_price_endpoint(input: PriceEstimationInput):
+    return await generate_price_estimation(input)
 
+# ------------------------
+# Utility Endpoints
+# ------------------------
 @router.get("/expensive-products")
 async def get_expensive_products():
     async with httpx.AsyncClient() as client:
@@ -61,7 +64,9 @@ async def get_expensive_products():
     expensive_products = [p for p in products_list if p.get("price", 0) > 100]
     return expensive_products
 
-
+# ------------------------
+# Recommendation Endpoint
+# ------------------------
 @router.post("/recommend", response_model=RecommendationResponse)
 async def personalized_recommendation(req: RecommendationRequest):
     user_prompt = req.userPrompt.lower()
