@@ -1,40 +1,60 @@
-# product_storytelling.py
-"""
-A flow to generate creative product stories with SEO tags.
-
-- generate_product_story: Handles product storytelling generation.
-- ProductStorytellingInput: Input type.
-- ProductStorytellingOutput: Output type.
-"""
+# backend/src/ai/flows/product_storytelling.py
 
 from backend.data_types_class import ProductStorytellingInput, ProductStorytellingOutput
+import google.generativeai as genai
+import os
+import json
+import re
 
-# Mock AI storytelling function (replace with actual AI integration)
+# Configure Gemini
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
 async def ai_generate_product_story(
     input: ProductStorytellingInput,
 ) -> ProductStorytellingOutput:
-    story = (
-        f"{input.productTitle} is more than just a product — "
-        f"{input.productDescription}. Crafted with care, it brings both function and inspiration, "
-        f"making it a meaningful choice for every customer."
+    prompt = f"""
+    You are an AI marketing assistant for local artisans.
+
+    Task:
+    - Given a product title and description, write a short, persuasive product story
+      that highlights craftsmanship, tradition, sustainability, and customer value.
+    - The tone should match professional e-commerce product listings 
+      (engaging but not fictional or made-up characters).
+    - Generate 5 SEO-friendly tags that help the artisan's product reach online buyers.
+
+    Input:
+    Product Title: {input.productTitle}
+    Product Description: {input.productDescription}
+
+    Respond strictly in JSON with this format:
+    {{
+      "story": "One marketing-style paragraph about the product.",
+      "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+    }}
+    """
+
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(prompt)
+    text = response.text.strip()
+
+    # Clean JSON (remove ```json fences if present)
+    cleaned = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
+
+    try:
+        data = json.loads(cleaned)
+        story = data.get("story", "")
+        seo_tags = data.get("tags", [])
+    except Exception:
+        story = text
+        seo_tags = []
+
+    return ProductStorytellingOutput(
+        creativeStory=story,
+        seoTags=seo_tags
     )
 
-    # Simple SEO-friendly tags (placeholder logic)
-    seo_tags = [
-        input.productTitle.lower().replace(" ", ""),
-        input.productTitle.lower().replace(" ", "-"),
-        "handcrafted",
-        "unique",
-        "sustainable",
-    ]
 
-    return ProductStorytellingOutput(creativeStory=story, seoTags=seo_tags)
-
-
-# Flow equivalent
 async def generate_product_story(
     input: ProductStorytellingInput,
 ) -> ProductStorytellingOutput:
     return await ai_generate_product_story(input)
-
-
