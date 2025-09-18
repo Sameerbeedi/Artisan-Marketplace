@@ -5,60 +5,101 @@ This is a Next.js project bootstrapped with `create-next-app` and enhanced withi
 ## Prerequisites
 
 Before you begin, ensure you have the following installed on your local machine:
-- [Node.js](https://nodejs.org/en/) (version 20.x or later recommended)
-- [npm](https://www.npmjs.com/) (which comes with Node.js) or [yarn](https://yarnpkg.com/)
+
+* [Node.js](https://nodejs.org/en/) (version 20.x or later recommended)
+* [npm](https://www.npmjs.com/) (comes with Node.js) or [yarn](https://yarnpkg.com/)
+* [Python](https://www.python.org/) (version 3.10 or later recommended)
 
 ## Getting Started
 
 Follow these steps to get your development environment set up and running.
 
-### 1. Clone the repository
+---
 
-First, you'll need to get the code onto your machine. If you've downloaded it as a ZIP, just unzip it.
+### Frontend (Next.js) Setup
 
-### 2. Install Dependencies
+1. **Clone the repository**
 
-Navigate into your project directory in your terminal and run the following command to install all the necessary packages defined in `package.json`:
+   First, you'll need to get the code onto your machine. If you've downloaded it as a ZIP, just unzip it.
 
-```bash
-npm install
-```
-or if you prefer using yarn:
-```bash
-yarn install
-```
+2. **Install Dependencies**
 
-### 3. Set Up Environment Variables
+   Navigate into your project directory in your terminal and run:
 
-The project uses a `.env` file to manage your Firebase configuration keys. These keys are necessary to connect to your Firebase backend services like Firestore and Authentication.
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-1.  Create a new file named `.env` in the root of your project directory.
-2.  Copy the contents from `src/lib/firebase.ts` into this file. It should look something like this, but with your actual Firebase project keys:
+   or if you prefer using yarn:
 
-```
-# This is an example, use your actual keys from firebase.ts
-NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSy..."
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project-id.firebaseapp.com"
-NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="1234567890"
-NEXT_PUBLIC_FIREBASE_APP_ID="1:1234567890:web:abcdef..."
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-..."
-```
-*Note: I will update `src/lib/firebase.ts` to read from these environment variables so you don't expose keys directly in your source code.*
+   ```bash
+   yarn install
+   ```
 
-### 4. Run the Development Server
+3. **Set Up Environment Variables**
 
-Now you are ready to start the local development server. Run the following command:
+   The project uses a `.env` file to manage your Firebase configuration keys.
 
-```bash
-npm run dev
-```
+   1. Create a new file named `.env` in the root of your project directory.
+   2. Copy the contents from `src/lib/firebase.ts` into this file. It should look something like this, but with your actual Firebase project keys:
 
-This will start the application, typically on port 9002. You can open your browser and navigate to:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSy..."
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project-id.firebaseapp.com"
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="1234567890"
+   NEXT_PUBLIC_FIREBASE_APP_ID="1:1234567890:web:abcdef..."
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-..."
+   ```
 
-[http://localhost:9002](http://localhost:9002)
+   *Note: `src/lib/firebase.ts` should be updated to read from these environment variables to avoid exposing keys directly in the source code.*
 
-You should see your kalaaVerse application running. Any changes you make to the code will automatically reload in the browser.
+4. **Run the Development Server**
 
-Happy coding!
+   ```bash
+   npm run dev
+   ```
+
+   Open your browser and navigate to [http://localhost:9002](http://localhost:9002). The application should be running, and any code changes will reload automatically.
+
+---
+
+### Backend (Python/FastAPI) Setup
+
+1. **Create a virtual environment**
+
+   ```bash
+   python -m venv venv
+   ```
+
+2. **Activate the virtual environment**
+
+   * On Windows:
+
+     ```bash
+     .\venv\Scripts\activate
+     ```
+
+   * On macOS/Linux:
+
+     ```bash
+     source venv/bin/activate
+     ```
+
+3. **Run the backend server**
+
+   On a separate terminal
+
+   ```bash
+   python -m backend.main
+   ```
+
+   By default, the FastAPI backend will start (usually on port 8000). You can access the API documentation at:
+
+   ```
+   http://localhost:9079/docs
+   ```
+
+---
