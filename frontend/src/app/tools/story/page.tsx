@@ -12,7 +12,8 @@ export default function StoryPage() {
           </h1>
         </div>
         <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
-          Provide your product's title and a brief description. Our AI will craft a compelling story and suggest SEO tags to attract more customers.
+          Provide your product's title and a brief description. Our AI will craft a
+          compelling story and suggest SEO tags to attract more customers.
         </p>
       </div>
       <StoryTool />

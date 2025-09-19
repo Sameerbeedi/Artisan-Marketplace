@@ -26,14 +26,18 @@ const formSchema = z.object({
   materials: z.string().min(2, 'Please enter materials used.'),
   artisan_hours: z.coerce.number().min(1, 'Enter valid artisan hours'),
   state: z.string().min(2, 'Please select a state.'),
+  productImage: z.any().optional(),
 });
 
 interface StoryResult {
-  creativeStory: string;
-  seoTags: string[];
-  minPrice: number;
-  maxPrice: number;
-  reasoning: string;
+  isPainting: boolean;
+  imagePath?: string;
+  classifiedAs?: string;
+  creativeStory?: string;
+  seoTags?: string[];
+  minPrice?: number;
+  maxPrice?: number;
+  reasoning?: string;
 }
 
 export function StoryTool() {
@@ -55,39 +59,93 @@ export function StoryTool() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setResult(null);
+
     try {
-      // Run both APIs in parallel
-      const [storyRes, priceRes] = await Promise.all([
-        fetch('/api/generateStory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values), // send full form for story
-        }),
-        fetch('/api/estimatePrice', {
+      // ---------- STEP 1: Classify product ----------
+      const formData = new FormData();
+      formData.append('productTitle', values.productTitle);
+      if (values.productImage?.[0]) {
+        formData.append('file', values.productImage[0]); // must match backend
+      }
+
+      const classifyRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/classify_product`,
+        { method: 'POST', body: formData }
+      );
+      if (!classifyRes.ok) throw new Error('Classification failed');
+      const classifyData = await classifyRes.json();
+
+      // ---------- STEP 2: Generate story ----------
+      const storyRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate_product_story`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            category: values.productTitle,       // map correctly
+            productTitle: values.productTitle,
+            productDescription: values.productDescription,
+          }),
+        }
+      );
+      if (!storyRes.ok) throw new Error('Story generation failed');
+      const storyData = await storyRes.json();
+
+      // ---------- STEP 3: Estimate price ----------
+      const priceRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/estimate_price`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: classifyData.classifiedAs || 'other',
             materials: values.materials,
             artisan_hours: values.artisan_hours,
             state: values.state,
           }),
-        }),
-      ]);
-
-      if (!storyRes.ok || !priceRes.ok) {
-        throw new Error('Failed to fetch story or price.');
-      }
-
-      const storyData = await storyRes.json();
+        }
+      );
+      if (!priceRes.ok) throw new Error('Price estimation failed');
       const priceData = await priceRes.json();
 
+      // ---------- STEP 4: Save product draft ----------
+      const saveRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/save_product_draft`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: values.productTitle,
+            description: values.productDescription,
+            materials: values.materials,
+            artisan_hours: values.artisan_hours,
+            state: values.state,
+            seoTags: storyData.seoTags,
+            price: {
+              min: priceData.minPrice,
+              max: priceData.maxPrice,
+            },
+          }),
+        }
+      );
+      if (!saveRes.ok) throw new Error('Saving draft failed');
+      const saveData = await saveRes.json();
+
+      // ---------- COMBINE RESULTS ----------
       setResult({
+        isPainting: classifyData.isPainting,
+        imagePath: classifyData.imagePath,
+        classifiedAs: classifyData.classifiedAs,
         creativeStory: storyData.creativeStory,
         seoTags: storyData.seoTags,
         minPrice: priceData.minPrice,
         maxPrice: priceData.maxPrice,
         reasoning: priceData.reasoning,
+      });
+
+      // Show success toast
+      toast({
+        title: 'Draft saved successfully!',
+        description: `Draft ID: ${saveData.id}`,
       });
     } catch (error) {
       toast({
@@ -107,7 +165,11 @@ export function StoryTool() {
       <Card>
         <CardContent className="p-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+              encType="multipart/form-data"
+            >
               <FormField
                 control={form.control}
                 name="productTitle"
@@ -115,7 +177,7 @@ export function StoryTool() {
                   <FormItem>
                     <FormLabel>Product Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="E.g., Hand-carved Wooden Elephant" {...field} />
+                      <Input placeholder="E.g., Mona Lisa Painting" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -129,7 +191,7 @@ export function StoryTool() {
                     <FormLabel>Product Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="E.g., A decorative piece crafted from sustainably sourced wood."
+                        placeholder="E.g., A traditional painting inspired by Mughal miniature art."
                         {...field}
                       />
                     </FormControl>
@@ -144,7 +206,7 @@ export function StoryTool() {
                   <FormItem>
                     <FormLabel>Materials Used</FormLabel>
                     <FormControl>
-                      <Input placeholder="E.g., Clay, Natural Dye" {...field} />
+                      <Input placeholder="E.g., Canvas, Oil Paint" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -157,7 +219,7 @@ export function StoryTool() {
                   <FormItem>
                     <FormLabel>Artisan Hours</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="E.g., 12" {...field} />
+                      <Input type="number" placeholder="E.g., 40" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -170,7 +232,27 @@ export function StoryTool() {
                   <FormItem>
                     <FormLabel>State (India)</FormLabel>
                     <FormControl>
-                      <Input placeholder="E.g., Karnataka" {...field} />
+                      <Input placeholder="E.g., Rajasthan" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="productImage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Upload Product Image</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          field.onChange(e.target.files as FileList)
+                        }
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -183,7 +265,7 @@ export function StoryTool() {
                 ) : (
                   <Wand2 className="mr-2 h-4 w-4" />
                 )}
-                Generate Story + Price
+                Generate Story + Classify + Estimate Price
               </Button>
             </form>
           </Form>
@@ -195,32 +277,57 @@ export function StoryTool() {
         {isLoading && (
           <div className="text-center mt-10">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">AI is generating...</p>
+            <p className="mt-4 text-muted-foreground">AI is working...</p>
           </div>
         )}
         {result && (
           <Card className="w-full">
-            <CardContent className="p-6">
-              <h3 className="text-2xl font-headline text-primary mb-4">
-                Generated Product Story
+            <CardContent className="p-6 space-y-4">
+              <h3 className="text-2xl font-headline text-primary">
+                Classification Result
               </h3>
-              <div
-                className="prose prose-sm md:prose-base max-w-none prose-p:font-body mb-4"
-                dangerouslySetInnerHTML={{
-                  __html: result.creativeStory.replace(/\n/g, '<br />'),
-                }}
-              />
-              <h4 className="text-lg font-semibold text-primary mb-2">SEO Tags:</h4>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {result.seoTags.map((tag, index) => (
-                  <Badge key={index} variant="secondary">{tag}</Badge>
-                ))}
-              </div>
-              <h4 className="text-lg font-semibold text-primary mb-2">Estimated Price Range:</h4>
-              <p className="text-green-600 font-bold">
-                ₹{result.minPrice} – ₹{result.maxPrice}
+              <p>
+                <strong>Category:</strong> {result.classifiedAs}
               </p>
-              <p className="mt-2 text-muted-foreground">{result.reasoning}</p>
+              <p>
+                <strong>Is Painting?:</strong>{' '}
+                {result.isPainting ? 'Yes 🎨' : 'No'}
+              </p>
+              {result.imagePath && (
+                <img
+                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${result.imagePath}`}
+                  alt="Uploaded product"
+                  className="max-w-xs rounded border"
+                />
+              )}
+
+              <h3 className="text-2xl font-headline text-primary">
+                Generated Story
+              </h3>
+              <p>{result.creativeStory}</p>
+
+              {result.seoTags && (
+                <>
+                  <h4 className="text-lg font-semibold">SEO Tags:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {result.seoTags.map((tag, i) => (
+                      <Badge key={i} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {result.minPrice && result.maxPrice && (
+                <>
+                  <h4 className="text-lg font-semibold">Estimated Price:</h4>
+                  <p className="text-green-600 font-bold">
+                    ₹{result.minPrice} – ₹{result.maxPrice}
+                  </p>
+                  <p className="text-muted-foreground">{result.reasoning}</p>
+                </>
+              )}
             </CardContent>
           </Card>
         )}

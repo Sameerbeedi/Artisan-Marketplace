@@ -1,6 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, Form
 import httpx
-from typing import List
+import google.generativeai as genai
+import base64
+
 from backend.data_types_class import (
     CatalogProductInput, CatalogProductOutput,
     HeritageStorytellingInput, HeritageStorytellingOutput,
@@ -20,11 +22,14 @@ from backend.src.ai.flows.technique_identification import identify_technique
 from backend.src.ai.flows.price_estimation import generate_price_estimation
 from backend.src.lib.data import Products as products
 
+# 🔹 Firebase
+from backend.firebase_config import db
+
 router = APIRouter()
 
-# ------------------------
+# -----------------------------------
 # AI Flows
-# ------------------------
+# -----------------------------------
 @router.post("/catalog_product", response_model=CatalogProductOutput)
 async def catalog_product_endpoint(input: CatalogProductInput):
     return await catalog_product(input)
@@ -53,9 +58,87 @@ async def identify_technique_endpoint(input: IdentifyTechniqueInput):
 async def estimate_price_endpoint(input: PriceEstimationInput):
     return await generate_price_estimation(input)
 
-# ------------------------
+
+# -----------------------------------
+# New: Product Classification (Hybrid)
+# -----------------------------------
+PAINTING_KEYWORDS = ["painting", "art", "canvas", "mural", "portrait"]
+
+@router.post("/classify_product")
+async def classify_product(
+    productTitle: str = Form(...),
+    file: UploadFile = None
+):
+    if not file:
+        return {"success": False, "error": "No file uploaded"}
+
+    # Read file content
+    content = await file.read()
+    b64_image = base64.b64encode(content).decode("utf-8")
+
+    # Ask Gemini
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    result = model.generate_content([
+        "Classify this product image into one of: painting, sculpture, textile, jewelry, pottery, other.",
+        {
+            "inline_data": {
+                "mime_type": file.content_type,
+                "data": b64_image
+            }
+        }
+    ])
+
+    output = result.text.lower()
+
+    # Extract category
+    category = "other"
+    if "painting" in output:
+        category = "painting"
+    elif "sculpture" in output:
+        category = "sculpture"
+    elif "textile" in output:
+        category = "textile"
+    elif "jewelry" in output:
+        category = "jewelry"
+    elif "pottery" in output:
+        category = "pottery"
+
+    # Hybrid check (title keywords + AI)
+    title_check = any(kw in productTitle.lower() for kw in PAINTING_KEYWORDS)
+    is_painting = category == "painting" or title_check
+
+    return {
+        "success": True,
+        "category": category,
+        "isPainting": is_painting,
+        "raw": output
+    }
+
+
+# -----------------------------------
+# Firestore Integration
+# -----------------------------------
+@router.post("/save_product_draft")
+async def save_product_draft(product: dict):
+    """
+    Save AI-processed product details (draft).
+    """
+    doc_ref = db.collection("products").add({**product, "status": "draft"})
+    return {"id": doc_ref[1].id, "status": "draft_saved"}
+
+
+@router.post("/publish_product/{product_id}")
+async def publish_product(product_id: str):
+    """
+    Mark product as published.
+    """
+    db.collection("products").document(product_id).update({"status": "published"})
+    return {"id": product_id, "status": "published"}
+
+
+# -----------------------------------
 # Utility Endpoints
-# ------------------------
+# -----------------------------------
 @router.get("/expensive-products")
 async def get_expensive_products():
     async with httpx.AsyncClient() as client:
@@ -64,9 +147,10 @@ async def get_expensive_products():
     expensive_products = [p for p in products_list if p.get("price", 0) > 100]
     return expensive_products
 
-# ------------------------
+
+# -----------------------------------
 # Recommendation Endpoint
-# ------------------------
+# -----------------------------------
 @router.post("/recommend", response_model=RecommendationResponse)
 async def personalized_recommendation(req: RecommendationRequest):
     user_prompt = req.userPrompt.lower()
@@ -112,7 +196,7 @@ async def personalized_recommendation(req: RecommendationRequest):
             score += 0.1
         recommended_products.append({**p, "relevanceScore": min(score, 1.0)})
 
-    # Sort by relevanceScore descending
+    # Sort by relevanceScore
     recommended_products = sorted(
         recommended_products, key=lambda x: x["relevanceScore"], reverse=True
     )[:max_results]
