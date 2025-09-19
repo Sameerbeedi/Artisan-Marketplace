@@ -1,7 +1,11 @@
-from fastapi import APIRouter, UploadFile, Form
+from fastapi import APIRouter, UploadFile, Form, HTTPException
 import httpx
 import google.generativeai as genai
 import base64
+import subprocess
+import tempfile
+import os
+import requests
 
 from backend.data_types_class import (
     CatalogProductInput, CatalogProductOutput,
@@ -24,7 +28,9 @@ from backend.src.lib.data import Products as products
 
 # 🔹 Firebase
 from backend.firebase_config import db
+from firebase_admin import storage
 
+# ✅ router must be defined BEFORE any endpoints
 router = APIRouter()
 
 # -----------------------------------
@@ -60,7 +66,7 @@ async def estimate_price_endpoint(input: PriceEstimationInput):
 
 
 # -----------------------------------
-# New: Product Classification (Hybrid)
+# Product Classification (Hybrid)
 # -----------------------------------
 PAINTING_KEYWORDS = ["painting", "art", "canvas", "mural", "portrait"]
 
@@ -122,8 +128,17 @@ async def classify_product(
 async def save_product_draft(product: dict):
     """
     Save AI-processed product details (draft).
+    Ensures `category` and `isPainting` are always present.
     """
-    doc_ref = db.collection("products").add({**product, "status": "draft"})
+    category = product.get("category", "other")
+    is_painting = product.get("isPainting", False)
+
+    doc_ref = db.collection("products").add({
+        **product,
+        "category": category,
+        "isPainting": is_painting,
+        "status": "draft"
+    })
     return {"id": doc_ref[1].id, "status": "draft_saved"}
 
 
@@ -134,6 +149,72 @@ async def publish_product(product_id: str):
     """
     db.collection("products").document(product_id).update({"status": "published"})
     return {"id": product_id, "status": "published"}
+
+
+# -----------------------------------
+# AR Model Generation (Blender + Firebase)
+# -----------------------------------
+@router.post("/generate_ar_model/{product_id}")
+async def generate_ar_model(product_id: str):
+    # Fetch product doc
+    doc = db.collection("products").document(product_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    data = doc.to_dict()
+    if not data.get("isPainting", False):
+        return {"success": False, "message": "Not a painting, skipping AR generation"}
+    
+    image_url = data.get("image_url")
+    if not image_url:
+        raise HTTPException(status_code=400, detail="No image_url found for product")
+
+    # --- Download image to temp ---
+    resp = requests.get(image_url)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to download image")
+    
+    tmp_dir = tempfile.mkdtemp()
+    image_path = os.path.join(tmp_dir, "input.jpg")
+    glb_path = os.path.join(tmp_dir, "output.glb")
+
+    with open(image_path, "wb") as f:
+        f.write(resp.content)
+
+    # --- Call Blender headless ---
+    blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
+    script_path = os.path.join("backend", "blender_scripts", "generate_canvas_glb.py")
+    
+    try:
+        result = subprocess.run(
+            [blender_exe, "-b", "-P", script_path, "--", image_path, glb_path],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print("✅ Blender stdout:", result.stdout)
+        print("✅ Blender stderr:", result.stderr)
+    except subprocess.CalledProcessError as e:
+        print("❌ Blender failed:", e.stderr)
+        raise HTTPException(status_code=500, detail=f"Blender failed: {e.stderr or e.stdout}")
+
+    # --- Upload GLB to Firebase Storage ---
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"products/{product_id}.glb")
+        blob.upload_from_filename(glb_path)
+        blob.make_public()
+        glb_url = blob.public_url
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firebase upload failed: {str(e)}")
+
+    # --- Update Firestore ---
+    db.collection("products").document(product_id).update({
+        "ar_model_url": glb_url,
+        "status": "published_with_ar"
+    })
+
+    return {"success": True, "ar_model_url": glb_url}
 
 
 # -----------------------------------

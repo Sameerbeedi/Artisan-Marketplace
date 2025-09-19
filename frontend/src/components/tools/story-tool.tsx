@@ -20,6 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 
+// 🔥 Firebase
+import { storage } from '@/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 const formSchema = z.object({
   productTitle: z.string().min(3, 'Please enter a product title.'),
   productDescription: z.string().min(5, 'Please enter a product description.'),
@@ -31,7 +35,7 @@ const formSchema = z.object({
 
 interface StoryResult {
   isPainting: boolean;
-  imagePath?: string;
+  imageUrl?: string;
   classifiedAs?: string;
   creativeStory?: string;
   seoTags?: string[];
@@ -56,16 +60,31 @@ export function StoryTool() {
     },
   });
 
+  // Upload to Firebase Storage
+  async function uploadImage(file: File): Promise<string> {
+    const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    console.log("✅ Firebase image URL:", url);
+    return url;
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setResult(null);
 
     try {
-      // ---------- STEP 1: Classify product ----------
+      // ---------- STEP 1: Upload Image to Firebase ----------
+      let imageUrl: string | undefined;
+      if (values.productImage?.[0]) {
+        imageUrl = await uploadImage(values.productImage[0]);
+      }
+
+      // ---------- STEP 2: Classify product ----------
       const formData = new FormData();
       formData.append('productTitle', values.productTitle);
       if (values.productImage?.[0]) {
-        formData.append('file', values.productImage[0]); // must match backend
+        formData.append('file', values.productImage[0]);
       }
 
       const classifyRes = await fetch(
@@ -75,7 +94,10 @@ export function StoryTool() {
       if (!classifyRes.ok) throw new Error('Classification failed');
       const classifyData = await classifyRes.json();
 
-      // ---------- STEP 2: Generate story ----------
+      const category = classifyData.category || 'other';
+      const isPainting = !!classifyData.isPainting;
+
+      // ---------- STEP 3: Generate story ----------
       const storyRes = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate_product_story`,
         {
@@ -90,14 +112,14 @@ export function StoryTool() {
       if (!storyRes.ok) throw new Error('Story generation failed');
       const storyData = await storyRes.json();
 
-      // ---------- STEP 3: Estimate price ----------
+      // ---------- STEP 4: Estimate price ----------
       const priceRes = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/estimate_price`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            category: classifyData.classifiedAs || 'other',
+            category,
             materials: values.materials,
             artisan_hours: values.artisan_hours,
             state: values.state,
@@ -107,7 +129,7 @@ export function StoryTool() {
       if (!priceRes.ok) throw new Error('Price estimation failed');
       const priceData = await priceRes.json();
 
-      // ---------- STEP 4: Save product draft ----------
+      // ---------- STEP 5: Save draft in Firestore ----------
       const saveRes = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/save_product_draft`,
         {
@@ -119,11 +141,11 @@ export function StoryTool() {
             materials: values.materials,
             artisan_hours: values.artisan_hours,
             state: values.state,
+            image_url: imageUrl,
             seoTags: storyData.seoTags,
-            price: {
-              min: priceData.minPrice,
-              max: priceData.maxPrice,
-            },
+            price: { min: priceData.minPrice, max: priceData.maxPrice },
+            category,      // ✅ saved
+            isPainting,    // ✅ saved
           }),
         }
       );
@@ -132,9 +154,9 @@ export function StoryTool() {
 
       // ---------- COMBINE RESULTS ----------
       setResult({
-        isPainting: classifyData.isPainting,
-        imagePath: classifyData.imagePath,
-        classifiedAs: classifyData.classifiedAs,
+        isPainting,
+        imageUrl,
+        classifiedAs: category,
         creativeStory: storyData.creativeStory,
         seoTags: storyData.seoTags,
         minPrice: priceData.minPrice,
@@ -142,7 +164,6 @@ export function StoryTool() {
         reasoning: priceData.reasoning,
       });
 
-      // Show success toast
       toast({
         title: 'Draft saved successfully!',
         description: `Draft ID: ${saveData.id}`,
@@ -170,6 +191,7 @@ export function StoryTool() {
               className="space-y-4"
               encType="multipart/form-data"
             >
+              {/* Form Fields */}
               <FormField
                 control={form.control}
                 name="productTitle"
@@ -238,7 +260,6 @@ export function StoryTool() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="productImage"
@@ -258,7 +279,6 @@ export function StoryTool() {
                   </FormItem>
                 )}
               />
-
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -293,12 +313,17 @@ export function StoryTool() {
                 <strong>Is Painting?:</strong>{' '}
                 {result.isPainting ? 'Yes 🎨' : 'No'}
               </p>
-              {result.imagePath && (
-                <img
-                  src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${result.imagePath}`}
-                  alt="Uploaded product"
-                  className="max-w-xs rounded border"
-                />
+              {result.imageUrl && (
+                <>
+                  <img
+                    src={result.imageUrl}
+                    alt="Uploaded product"
+                    className="max-w-xs rounded border"
+                  />
+                  <p className="text-xs break-all text-blue-600 underline">
+                    {result.imageUrl}
+                  </p>
+                </>
               )}
 
               <h3 className="text-2xl font-headline text-primary">
