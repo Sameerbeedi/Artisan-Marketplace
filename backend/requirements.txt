@@ -5,3 +5,5 @@ pydantic
 python-dotenv
 firebase-admin
 google-generativeai
+python-multipart
+google-cloud-storage
