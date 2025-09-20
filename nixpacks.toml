@@ -1,0 +1,6 @@
+{
+  "providers": ["python"],
+  "buildCommand": "cd backend && pip install -r requirements.txt",
+  "startCommand": "cd backend && python main.py",
+  "pythonVersion": "3.11"
+}
