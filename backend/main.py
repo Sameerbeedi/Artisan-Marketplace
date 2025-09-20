@@ -33,18 +33,24 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # ⚠️ In production, restrict to your frontend domain
-    allow_credentials=True,
+    allow_credentials=False,  # Avoid '*' with credentials to prevent CORS failures
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Import and include routes
 try:
-    from backend.routes import router as api_router
+    from .routes import router as api_router
 except ImportError:
     from routes import router as api_router
 
 app.include_router(api_router)
+
+# Static file serving for AR models when Firebase is not available
+from fastapi.staticfiles import StaticFiles
+ar_models_dir = os.path.join(os.path.dirname(__file__), "ar_models")
+if os.path.exists(ar_models_dir):
+    app.mount("/ar_models", StaticFiles(directory=ar_models_dir), name="ar_models")
 
 # ---------------------------
 # Uvicorn entrypoint
@@ -57,4 +63,4 @@ if __name__ == "__main__":
         port = 9079
 
     print(f"🚀 Starting Artisan Marketplace API on port {port}")
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

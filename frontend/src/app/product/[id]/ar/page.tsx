@@ -18,12 +18,14 @@ export default function ProductARPage() {
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
+  const backendBase = typeof window !== 'undefined'
+    ? `http://${window.location.hostname}:9079`
+    : (process.env.NEXT_PUBLIC_BACKEND_URL || '');
+
   useEffect(() => {
     async function fetchProduct() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/get_product/${productId}`
-        );
+        const res = await fetch(`${backendBase}/get_product/${productId}`);
         const data = await res.json();
         setProduct(data);
         setArUrl(data.ar_model_url || null);
@@ -45,10 +47,7 @@ export default function ProductARPage() {
       console.log('🎯 Starting AR generation for product:', productId);
       console.log('🖼️ Product image URL:', product?.image_url);
       
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate_ar_model/${productId}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${backendBase}/generate_ar_model/${productId}`, { method: "POST" });
       
       const data = await res.json();
       console.log('📊 AR generation response:', data);
@@ -75,10 +74,7 @@ export default function ProductARPage() {
   async function publishProduct() {
     setPublishing(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/publish_product/${productId}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${backendBase}/publish_product/${productId}`, { method: "POST" });
       const data = await res.json();
       alert(`✅ Product published: ${data.id}`);
     } catch (err) {

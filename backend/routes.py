@@ -6,8 +6,10 @@ import subprocess
 import tempfile
 import os
 import requests
+import shutil
+from PIL import Image
 
-from backend.data_types_class import (
+from data_types_class import (
     CatalogProductInput, CatalogProductOutput,
     HeritageStorytellingInput, HeritageStorytellingOutput,
     GenerateProcessDocumentationInput, GenerateProcessDocumentationOutput,
@@ -17,21 +19,28 @@ from backend.data_types_class import (
     RecommendationRequest, RecommendationResponse,
     PriceEstimationInput, PriceEstimationOutput
 )
-from backend.src.ai.flows.automated_product_catalog import catalog_product
-from backend.src.ai.flows.heritage_storytelling import generate_heritage_story
-from backend.src.ai.flows.process_documentation import generate_process_documentation
-from backend.src.ai.flows.product_storytelling import generate_product_story
-from backend.src.ai.flows.quality_assessment import analyze_product_photo
-from backend.src.ai.flows.technique_identification import identify_technique
-from backend.src.ai.flows.price_estimation import generate_price_estimation
-from backend.src.lib.data import Products as products
+from src.ai.flows.automated_product_catalog import catalog_product
+from src.ai.flows.heritage_storytelling import generate_heritage_story
+from src.ai.flows.process_documentation import generate_process_documentation
+from src.ai.flows.product_storytelling import generate_product_story
+from src.ai.flows.quality_assessment import analyze_product_photo
+from src.ai.flows.technique_identification import identify_technique
+from src.ai.flows.price_estimation import generate_price_estimation
+from src.lib.data import Products as products
 
 # 🔹 Firebase
-from backend.firebase_config import db
+from firebase_config import db, bucket
 from firebase_admin import storage, firestore
 
 # ✅ router must be defined BEFORE any endpoints
 router = APIRouter()
+# -----------------------------------
+# Health check
+# -----------------------------------
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
+
 
 # -----------------------------------
 # AI Flows
@@ -126,6 +135,10 @@ async def save_product_draft(product: dict):
     Save AI-processed product details (draft).
     Ensures `category`, `isPainting`, and `story` are always present.
     """
+    if not db:
+        # Firebase not available - return mock response for testing
+        return {"id": "mock_draft_123", "status": "draft_saved_without_firebase"}
+        
     category = product.get("category", "other")
     is_painting = product.get("isPainting", False)
 
@@ -149,6 +162,16 @@ async def get_product(product_id: str):
     """
     Fetch a single product from Firestore by ID.
     """
+    if not db:
+        # Firebase not available - return mock response for testing
+        return {
+            "id": product_id,
+            "title": "Mock Product",
+            "isPainting": True,
+            "image_url": "https://example.com/mock-image.jpg",
+            "status": "mock"
+        }
+        
     doc = db.collection("products").document(product_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -157,6 +180,10 @@ async def get_product(product_id: str):
 
 @router.post("/publish_product/{product_id}")
 async def publish_product(product_id: str):
+    if not db:
+        # Firebase not available - return mock response
+        return {"id": product_id, "status": "published_without_firebase"}
+        
     ref = db.collection("products").document(product_id)
     if not ref.get().exists:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -173,6 +200,18 @@ async def publish_product(product_id: str):
 # -----------------------------------
 @router.post("/generate_ar_model/{product_id}")
 async def generate_ar_model(product_id: str):
+    if not db:
+        # Firebase not available - use mock data for testing
+        print(f"🔥 Mock AR generation for product: {product_id}")
+        # Use the existing paint.jpg as test image
+        mock_image_url = "file://" + os.path.join(os.path.dirname(__file__), "paint.jpg")
+        mock_data = {
+            "isPainting": True,
+            "image_url": mock_image_url,
+            "title": "Mock Test Painting"
+        }
+        return await generate_with_blender(product_id, mock_image_url, mock_data)
+    
     doc = db.collection("products").document(product_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -185,47 +224,132 @@ async def generate_ar_model(product_id: str):
     if not image_url:
         raise HTTPException(status_code=400, detail="No image_url found for product")
 
-    resp = requests.get(image_url)
-    if resp.status_code != 200:
-        raise HTTPException(status_code=400, detail="Failed to download image")
-    
+    print(f"🎯 Generating AR model for product {product_id}")
+    print(f"🖼️ Using image: {image_url}")
+
+    # Use Blender for AR generation
+    return await generate_with_blender(product_id, image_url, data)
+
+async def generate_with_blender(product_id: str, image_url: str, product_data: dict):
+    """Generate AR model using Blender"""
     tmp_dir = tempfile.mkdtemp()
-    image_path = os.path.join(tmp_dir, "input.jpg")
+    raw_image_path = os.path.join(tmp_dir, "input")
     glb_path = os.path.join(tmp_dir, "output.glb")
 
-    with open(image_path, "wb") as f:
-        f.write(resp.content)
+    # Handle different image sources
+    if image_url.startswith("file://"):
+        # Local file - copy directly
+        local_path = image_url.replace("file://", "")
+        raw_jpg_path = raw_image_path + ".jpg"
+        try:
+            import shutil
+            shutil.copy2(local_path, raw_jpg_path)
+            print(f"✅ Using local file: {local_path}")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to access local file: {e}")
+    else:
+        # Download from URL
+        resp = requests.get(image_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to download image")
+        
+        raw_jpg_path = raw_image_path + ".jpg"
+        with open(raw_jpg_path, "wb") as f:
+            f.write(resp.content)
 
-    blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
-    script_path = os.path.join("backend", "blender_scripts", "generate_canvas_glb.py")
+    # Normalize to PNG for robust glTF texturing
+    png_image_path = raw_image_path + ".png"
+    try:
+        with Image.open(raw_jpg_path) as img:
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGB")
+            img.save(png_image_path, format="PNG")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process image: {e}")
+
+    # Platform-specific Blender executable paths
+    import platform
+    system = platform.system()
+    
+    if system == "Windows":
+        # Common Windows Blender installation paths
+        possible_paths = [
+            "C:\\Program Files\\Blender Foundation\\Blender 4.5\\blender.exe",
+            "C:\\Program Files\\Blender Foundation\\Blender 4.0\\blender.exe",
+            "C:\\Program Files\\Blender Foundation\\Blender 3.6\\blender.exe",
+            "C:\\Program Files\\Blender Foundation\\Blender\\blender.exe",
+        ]
+        blender_exe = next((p for p in possible_paths if os.path.exists(p)), None)
+        if not blender_exe:
+            which_blender = shutil.which("blender")
+            if which_blender:
+                blender_exe = which_blender
+        if not blender_exe:
+            raise HTTPException(status_code=500, detail="Blender not found. Install Blender 4.x or add it to PATH")
+    elif system == "Darwin":  # macOS
+        blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
+    else:  # Linux
+        blender_exe = "blender"
+    
+    # Use absolute path to the Blender script to avoid CWD issues
+    script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "blender_scripts", "generate_canvas_glb.py"))
     
     try:
+        print(f"🎯 Running Blender command: {blender_exe}")
+        print(f"📁 Script path: {script_path}")
+        print(f"🖼️ Image path (PNG): {png_image_path}")
+        print(f"📦 Output path: {glb_path}")
+        
         result = subprocess.run(
-            [blender_exe, "-b", "-P", script_path, "--", image_path, glb_path],
+            [blender_exe, "-b", "-P", script_path, "--", png_image_path, glb_path],
             check=True,
             capture_output=True,
             text=True
         )
         print("✅ Blender stdout:", result.stdout)
         print("✅ Blender stderr:", result.stderr)
+        
+        # Verify the GLB file was actually created
+        if not os.path.exists(glb_path):
+            raise HTTPException(status_code=500, detail="GLB file was not generated by Blender")
+            
+        file_size = os.path.getsize(glb_path)
+        print(f"✅ GLB file created successfully, size: {file_size} bytes")
+        
     except subprocess.CalledProcessError as e:
         print("❌ Blender failed:", e.stderr)
+        print("❌ Blender stdout:", e.stdout)
         raise HTTPException(status_code=500, detail=f"Blender failed: {e.stderr or e.stdout}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail=f"Blender executable not found at: {blender_exe}")
 
     try:
-        bucket = storage.bucket()
-        blob = bucket.blob(f"products/{product_id}.glb")
-        blob.upload_from_filename(glb_path)
-        blob.make_public()
-        glb_url = blob.public_url
+        if bucket:
+            blob = bucket.blob(f"products/{product_id}.glb")
+            blob.upload_from_filename(glb_path)
+            blob.make_public()
+            glb_url = blob.public_url
+        else:
+            # Firebase not available - create a local file URL for testing
+            # Copy the GLB to a static location in the backend
+            static_dir = os.path.join(os.path.dirname(__file__), "ar_models")
+            os.makedirs(static_dir, exist_ok=True)
+            static_glb_path = os.path.join(static_dir, f"{product_id}.glb")
+            shutil.copy2(glb_path, static_glb_path)
+            # Use a local URL (you'd need to serve static files)
+            glb_url = f"http://localhost:9079/ar_models/{product_id}.glb"
+            print(f"⚠️ Firebase Storage not available. GLB saved locally: {static_glb_path}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Firebase upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"File storage failed: {str(e)}")
 
-    db.collection("products").document(product_id).update({
-        "ar_model_url": glb_url,
-        "status": "ar_ready",
-        "updated_at": firestore.SERVER_TIMESTAMP
-    })
+    if db:
+        db.collection("products").document(product_id).update({
+            "ar_model_url": glb_url,
+            "status": "ar_ready",
+            "updated_at": firestore.SERVER_TIMESTAMP
+        })
+    else:
+        print(f"⚠️ Firebase not available. AR model URL: {glb_url}")
 
     return {"success": True, "ar_model_url": glb_url}
 

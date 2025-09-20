@@ -6,7 +6,10 @@ Analyzes product photos for quality indicators and suggests improvements.
 - AnalyzeProductPhotoInput: Input type.
 - AnalyzeProductPhotoOutput: Output type.
 """
-from backend.data_types_class import AnalyzeProductPhotoInput, AnalyzeProductPhotoOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import AnalyzeProductPhotoInput, AnalyzeProductPhotoOutput
 import base64
 
 # Mock AI analysis function (replace with real AI/vision integration)

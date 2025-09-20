@@ -64,10 +64,22 @@ bpy.ops.object.mode_set(mode="OBJECT")
 # Painting (front)
 painting_mat = bpy.data.materials.new(name="PaintingMaterial")
 painting_mat.use_nodes = True
-bsdf_paint = painting_mat.node_tree.nodes.get("Principled BSDF")
-tex_image = painting_mat.node_tree.nodes.new("ShaderNodeTexImage")
+nodes = painting_mat.node_tree.nodes
+links = painting_mat.node_tree.links
+
+# Clear default nodes to build a consistent emissive material
+for n in nodes:
+    nodes.remove(n)
+
+output_node = nodes.new("ShaderNodeOutputMaterial")
+emission_node = nodes.new("ShaderNodeEmission")
+tex_image = nodes.new("ShaderNodeTexImage")
 tex_image.image = img
-painting_mat.node_tree.links.new(bsdf_paint.inputs["Base Color"], tex_image.outputs["Color"])
+
+# Slight emission strength for visibility
+emission_node.inputs[1].default_value = 1.0
+links.new(emission_node.inputs[0], tex_image.outputs["Color"])  # Color -> Emission
+links.new(output_node.inputs[0], emission_node.outputs["Emission"])  # Emission -> Surface
 
 # Wood (back + sides)
 wood_mat = bpy.data.materials.new(name="WoodMaterial")
@@ -98,10 +110,18 @@ bpy.ops.object.select_all(action="DESELECT")
 canvas.select_set(True)
 bpy.context.view_layer.objects.active = canvas
 
+# Basic world light to avoid complete darkness in some viewers
+world = bpy.context.scene.world or bpy.data.worlds.new("World")
+world.use_nodes = True
+world.node_tree.nodes["Background"].inputs[1].default_value = 1.0
+bpy.context.scene.world = world
+
 bpy.ops.export_scene.gltf(
     filepath=output_path,
     export_format="GLB",
-    use_selection=True
+    use_selection=True,
+    export_texcoords=True,
+    export_normals=True,
 )
 
 print(f"✅ Exported GLB with painting front & wood back: {output_path}")
