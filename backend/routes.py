@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, Form, HTTPException
+from fastapi import APIRouter, UploadFile, Form, HTTPException, Request
 import httpx
 import google.generativeai as genai
 import base64
@@ -30,6 +30,9 @@ from src.lib.data import Products as products
 
 # In-memory store for when Firebase is not available
 products_store = {}
+
+# In-memory store for image URL mappings (prevents exposing Firebase URLs)
+image_mappings = {}
 
 # 🔹 Firebase
 from firebase_config import db, bucket
@@ -212,7 +215,7 @@ async def publish_product(product_id: str):
 # AR Model Generation (Blender + Firebase)
 # -----------------------------------
 @router.post("/generate_ar_model/{product_id}")
-async def generate_ar_model(product_id: str):
+async def generate_ar_model(product_id: str, request: Request):
     if not db:
         # Firebase not available - check if we have locally saved product data
         print(f"🔥 Mock mode: AR generation for product: {product_id}")
@@ -229,7 +232,7 @@ async def generate_ar_model(product_id: str):
                 return {"success": False, "message": "Not a painting, skipping AR generation"}
                 
             print(f"🎯 Using actual uploaded image: {image_url}")
-            return await generate_with_blender(product_id, image_url, product_data)
+            return await generate_with_blender(product_id, image_url, product_data, request)
         else:
             raise HTTPException(status_code=404, detail=f"Product {product_id} not found in local store")
     
@@ -249,9 +252,9 @@ async def generate_ar_model(product_id: str):
     print(f"🖼️ Using image: {image_url}")
 
     # Use Blender for AR generation
-    return await generate_with_blender(product_id, image_url, data)
+    return await generate_with_blender(product_id, image_url, data, request)
 
-async def generate_with_blender(product_id: str, image_url: str, product_data: dict):
+async def generate_with_blender(product_id: str, image_url: str, product_data: dict, request: Request):
     """Generate AR model using Blender"""
     tmp_dir = tempfile.mkdtemp()
     raw_image_path = os.path.join(tmp_dir, "input")
@@ -357,7 +360,12 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
             static_glb_path = os.path.join(static_dir, f"{product_id}.glb")
             shutil.copy2(glb_path, static_glb_path)
             # Use a local URL (you'd need to serve static files)
-            glb_url = f"http://localhost:9079/ar_models/{product_id}.glb"
+            # Generate URL based on environment
+            host = request.headers.get("host", "localhost:9079")
+            
+            # For production deployment, use environment variable for backend URL
+            backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+            glb_url = f"{backend_url}/ar_models/{product_id}.glb"
             print(f"⚠️ Firebase Storage not available. GLB saved locally: {static_glb_path}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File storage failed: {str(e)}")
