@@ -56,12 +56,21 @@ export default function ARViewer({
           src={modelUrl}
           alt={altText}
           ar
-          ar-modes="scene-viewer quick-look webxr"
+          ar-modes="webxr scene-viewer quick-look"
           ar-scale="fixed"
           camera-controls
-          auto-rotate
           style={{ width: "100%", height: "600px" }}
           ar-placement="wall"
+          ar-hit-test="wall"
+          interaction-prompt="auto"
+          interaction-prompt-style="basic"
+          environment-image="legacy"
+          shadow-intensity="0.3"
+          shadow-softness="1"
+          min-camera-orbit="auto auto 1m"
+          max-camera-orbit="auto auto 3m"
+          camera-orbit="0deg 90deg 2m"
+          field-of-view="45deg"
           loading="eager"
           onLoad={handleLoad}
           onError={handleLoadError}

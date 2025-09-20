@@ -31,9 +31,6 @@ from src.lib.data import Products as products
 # In-memory store for when Firebase is not available
 products_store = {}
 
-# In-memory store for image URL mappings (prevents exposing Firebase URLs)
-image_mappings = {}
-
 # 🔹 Firebase
 from firebase_config import db, bucket
 from firebase_admin import storage, firestore

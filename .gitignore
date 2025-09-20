@@ -50,21 +50,12 @@ next-env.d.ts
 # genkit
 .genkit/*
 
-# env files (ignore all environment files)
-.env
-.env.*
+# env files (ignore local/private only)
 .env.local
-.env.development
 .env.development.local
-.env.production
 .env.production.local
-.env.test
 .env.test.local
 backend/env.local
-backend/.env
-backend/.env.*
-frontend/.env
-frontend/.env.*
 
 # firebase
 firebase-debug.log
