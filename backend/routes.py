@@ -28,6 +28,9 @@ from src.ai.flows.technique_identification import identify_technique
 from src.ai.flows.price_estimation import generate_price_estimation
 from src.lib.data import Products as products
 
+# In-memory store for when Firebase is not available
+products_store = {}
+
 # 🔹 Firebase
 from firebase_config import db, bucket
 from firebase_admin import storage, firestore
@@ -136,8 +139,21 @@ async def save_product_draft(product: dict):
     Ensures `category`, `isPainting`, and `story` are always present.
     """
     if not db:
-        # Firebase not available - return mock response for testing
-        return {"id": "mock_draft_123", "status": "draft_saved_without_firebase"}
+        # Firebase not available - store in memory and return mock ID
+        product_id = f"mock_draft_{len(products_store) + 1}"
+        
+        # Store the actual product data with all fields
+        products_store[product_id] = {
+            **product,
+            "category": product.get("category", "other"),
+            "isPainting": product.get("isPainting", False),
+            "story": product.get("story") or product.get("creativeStory") or "",
+            "status": "draft",
+            "id": product_id
+        }
+        
+        print(f"💾 Stored product {product_id} in memory with image_url: {product.get('image_url')}")
+        return {"id": product_id, "status": "draft_saved_without_firebase"}
         
     category = product.get("category", "other")
     is_painting = product.get("isPainting", False)
@@ -163,14 +179,11 @@ async def get_product(product_id: str):
     Fetch a single product from Firestore by ID.
     """
     if not db:
-        # Firebase not available - return mock response for testing
-        return {
-            "id": product_id,
-            "title": "Mock Product",
-            "isPainting": True,
-            "image_url": "https://example.com/mock-image.jpg",
-            "status": "mock"
-        }
+        # Firebase not available - check in-memory store
+        if product_id in products_store:
+            return products_store[product_id]
+        else:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found in local store")
         
     doc = db.collection("products").document(product_id).get()
     if not doc.exists:
@@ -201,16 +214,24 @@ async def publish_product(product_id: str):
 @router.post("/generate_ar_model/{product_id}")
 async def generate_ar_model(product_id: str):
     if not db:
-        # Firebase not available - use mock data for testing
-        print(f"🔥 Mock AR generation for product: {product_id}")
-        # Use the existing paint.jpg as test image
-        mock_image_url = "file://" + os.path.join(os.path.dirname(__file__), "paint.jpg")
-        mock_data = {
-            "isPainting": True,
-            "image_url": mock_image_url,
-            "title": "Mock Test Painting"
-        }
-        return await generate_with_blender(product_id, mock_image_url, mock_data)
+        # Firebase not available - check if we have locally saved product data
+        print(f"🔥 Mock mode: AR generation for product: {product_id}")
+        
+        # Try to get actual product data from our in-memory store
+        if product_id in products_store:
+            product_data = products_store[product_id]
+            image_url = product_data.get("image_url")
+            
+            if not image_url:
+                raise HTTPException(status_code=400, detail="No image_url found for product")
+                
+            if not product_data.get("isPainting", False):
+                return {"success": False, "message": "Not a painting, skipping AR generation"}
+                
+            print(f"🎯 Using actual uploaded image: {image_url}")
+            return await generate_with_blender(product_id, image_url, product_data)
+        else:
+            raise HTTPException(status_code=404, detail=f"Product {product_id} not found in local store")
     
     doc = db.collection("products").document(product_id).get()
     if not doc.exists:
@@ -242,7 +263,6 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
         local_path = image_url.replace("file://", "")
         raw_jpg_path = raw_image_path + ".jpg"
         try:
-            import shutil
             shutil.copy2(local_path, raw_jpg_path)
             print(f"✅ Using local file: {local_path}")
         except Exception as e:
