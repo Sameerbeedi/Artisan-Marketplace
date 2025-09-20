@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
+import { ArtistOnly } from '../../components/auth/ArtistOnly';
 
 const tools = [
   {
@@ -49,38 +50,40 @@ const tools = [
 
 export default function ToolsPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-headline text-primary">
-          AI-Powered Artisan Tools
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-          Leverage our suite of AI tools to enhance your products, streamline
-          your workflow, and tell your unique story.
-        </p>
-      </div>
+    <ArtistOnly>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-headline text-primary">
+            AI-Powered Artisan Tools
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Leverage our suite of AI tools to enhance your products, streamline
+            your workflow, and tell your unique story.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {tools.map((tool) => (
-          <Link href={tool.href} key={tool.href} className="group">
-            <Card className="h-full flex flex-col justify-between hover:border-primary transition-colors duration-300 transform hover:-translate-y-1 hover:shadow-xl">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <tool.icon className="h-10 w-10 mb-4 text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {tools.map((tool) => (
+            <Link href={tool.href} key={tool.href} className="group">
+              <Card className="h-full flex flex-col justify-between hover:border-primary transition-colors duration-300 transform hover:-translate-y-1 hover:shadow-xl">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <tool.icon className="h-10 w-10 mb-4 text-primary" />
+                  </div>
+                  <CardTitle className="font-headline text-2xl">
+                    {tool.title}
+                  </CardTitle>
+                  <CardDescription>{tool.description}</CardDescription>
+                </CardHeader>
+                <div className="p-6 pt-0 text-primary font-semibold flex items-center gap-2">
+                  Use Tool
+                  <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
                 </div>
-                <CardTitle className="font-headline text-2xl">
-                  {tool.title}
-                </CardTitle>
-                <CardDescription>{tool.description}</CardDescription>
-              </CardHeader>
-              <div className="p-6 pt-0 text-primary font-semibold flex items-center gap-2">
-                Use Tool
-                <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Card>
-          </Link>
-        ))}
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
-    </div>
+    </ArtistOnly>
   );
 }

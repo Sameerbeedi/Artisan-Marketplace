@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 node_modules/
 /node_modules
@@ -12,7 +10,6 @@ node_modules/
 !.yarn/versions
 __pycache__/
 *.pyc
-
 
 # testing
 /coverage
@@ -27,6 +24,8 @@ __pycache__/
 # misc
 .DS_Store
 *.pem
+*.swp
+*.swo
 
 # debug
 npm-debug.log*
@@ -41,9 +40,20 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# genkit
 .genkit/*
-.env*
+
+# env files (ignore local/private only)
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+backend/env.local
 
 # firebase
 firebase-debug.log
 firestore-debug.log
+backend/firebase_service_account.json
+
+# python venv
+venv/
