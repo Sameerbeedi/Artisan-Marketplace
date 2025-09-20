@@ -28,7 +28,7 @@ from backend.src.lib.data import Products as products
 
 # 🔹 Firebase
 from backend.firebase_config import db
-from firebase_admin import storage
+from firebase_admin import storage, firestore
 
 # ✅ router must be defined BEFORE any endpoints
 router = APIRouter()
@@ -78,11 +78,9 @@ async def classify_product(
     if not file:
         return {"success": False, "error": "No file uploaded"}
 
-    # Read file content
     content = await file.read()
     b64_image = base64.b64encode(content).decode("utf-8")
 
-    # Ask Gemini
     model = genai.GenerativeModel("gemini-1.5-flash")
     result = model.generate_content([
         "Classify this product image into one of: painting, sculpture, textile, jewelry, pottery, other.",
@@ -96,7 +94,6 @@ async def classify_product(
 
     output = result.text.lower()
 
-    # Extract category
     category = "other"
     if "painting" in output:
         category = "painting"
@@ -109,7 +106,6 @@ async def classify_product(
     elif "pottery" in output:
         category = "pottery"
 
-    # Hybrid check (title keywords + AI)
     title_check = any(kw in productTitle.lower() for kw in PAINTING_KEYWORDS)
     is_painting = category == "painting" or title_check
 
@@ -128,26 +124,47 @@ async def classify_product(
 async def save_product_draft(product: dict):
     """
     Save AI-processed product details (draft).
-    Ensures `category` and `isPainting` are always present.
+    Ensures `category`, `isPainting`, and `story` are always present.
     """
     category = product.get("category", "other")
     is_painting = product.get("isPainting", False)
 
-    doc_ref = db.collection("products").add({
+    # Normalize story field
+    story_text = product.get("story") or product.get("creativeStory") or ""
+
+    doc_ref = db.collection("products").document()  # generate a new doc ID
+    doc_ref.set({
         **product,
         "category": category,
         "isPainting": is_painting,
-        "status": "draft"
+        "story": story_text,
+        "status": "draft",
+        "created_at": firestore.SERVER_TIMESTAMP,
     })
-    return {"id": doc_ref[1].id, "status": "draft_saved"}
+    return {"id": doc_ref.id, "status": "draft_saved"}
+
+
+@router.get("/get_product/{product_id}")
+async def get_product(product_id: str):
+    """
+    Fetch a single product from Firestore by ID.
+    """
+    doc = db.collection("products").document(product_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return doc.to_dict()
 
 
 @router.post("/publish_product/{product_id}")
 async def publish_product(product_id: str):
-    """
-    Mark product as published.
-    """
-    db.collection("products").document(product_id).update({"status": "published"})
+    ref = db.collection("products").document(product_id)
+    if not ref.get().exists:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    ref.update({
+        "status": "published",
+        "published_at": firestore.SERVER_TIMESTAMP
+    })
     return {"id": product_id, "status": "published"}
 
 
@@ -156,7 +173,6 @@ async def publish_product(product_id: str):
 # -----------------------------------
 @router.post("/generate_ar_model/{product_id}")
 async def generate_ar_model(product_id: str):
-    # Fetch product doc
     doc = db.collection("products").document(product_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -169,7 +185,6 @@ async def generate_ar_model(product_id: str):
     if not image_url:
         raise HTTPException(status_code=400, detail="No image_url found for product")
 
-    # --- Download image to temp ---
     resp = requests.get(image_url)
     if resp.status_code != 200:
         raise HTTPException(status_code=400, detail="Failed to download image")
@@ -181,7 +196,6 @@ async def generate_ar_model(product_id: str):
     with open(image_path, "wb") as f:
         f.write(resp.content)
 
-    # --- Call Blender headless ---
     blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
     script_path = os.path.join("backend", "blender_scripts", "generate_canvas_glb.py")
     
@@ -198,7 +212,6 @@ async def generate_ar_model(product_id: str):
         print("❌ Blender failed:", e.stderr)
         raise HTTPException(status_code=500, detail=f"Blender failed: {e.stderr or e.stdout}")
 
-    # --- Upload GLB to Firebase Storage ---
     try:
         bucket = storage.bucket()
         blob = bucket.blob(f"products/{product_id}.glb")
@@ -208,10 +221,10 @@ async def generate_ar_model(product_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Firebase upload failed: {str(e)}")
 
-    # --- Update Firestore ---
     db.collection("products").document(product_id).update({
         "ar_model_url": glb_url,
-        "status": "published_with_ar"
+        "status": "ar_ready",
+        "updated_at": firestore.SERVER_TIMESTAMP
     })
 
     return {"success": True, "ar_model_url": glb_url}
@@ -225,8 +238,7 @@ async def get_expensive_products():
     async with httpx.AsyncClient() as client:
         response = await client.get("https://fakestoreapi.com/products")
         products_list = response.json()
-    expensive_products = [p for p in products_list if p.get("price", 0) > 100]
-    return expensive_products
+    return [p for p in products_list if p.get("price", 0) > 100]
 
 
 # -----------------------------------
@@ -240,17 +252,14 @@ async def personalized_recommendation(req: RecommendationRequest):
     max_results = req.maxResults or 5
     exclude_products = req.excludeProducts or []
 
-    # Filter available products
     available_products = [p for p in products if p["id"] not in exclude_products]
 
-    # Apply category filter
     if user_preferences and user_preferences.categories:
         available_products = [
             p for p in available_products
             if any(cat.lower() in p["category"].lower() for cat in user_preferences.categories)
         ]
 
-    # Apply price range filter
     if user_preferences and user_preferences.priceRange:
         min_price = user_preferences.priceRange.min
         max_price = user_preferences.priceRange.max
@@ -258,14 +267,12 @@ async def personalized_recommendation(req: RecommendationRequest):
             p for p in available_products if min_price <= p["price"] <= max_price
         ]
 
-    # Apply preferred artisans filter
     if user_preferences and user_preferences.preferredArtisans:
         available_products = [
             p for p in available_products
             if any(artisan.lower() in p["artisan"].lower() for artisan in user_preferences.preferredArtisans)
         ]
 
-    # Simple fallback relevance scoring
     recommended_products = []
     for p in available_products:
         score = 0.6
@@ -273,11 +280,10 @@ async def personalized_recommendation(req: RecommendationRequest):
             score += 0.1
         if any(word in p["category"].lower() for word in user_prompt.split()):
             score += 0.1
-        if any(word in p["aiHint"].lower() for word in user_prompt.split()):
+        if any(word in p.get("aiHint", "").lower() for word in user_prompt.split()):
             score += 0.1
         recommended_products.append({**p, "relevanceScore": min(score, 1.0)})
 
-    # Sort by relevanceScore
     recommended_products = sorted(
         recommended_products, key=lambda x: x["relevanceScore"], reverse=True
     )[:max_results]

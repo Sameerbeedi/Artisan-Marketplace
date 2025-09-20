@@ -1,6 +1,5 @@
 import bpy
 import sys
-import os
 
 # ----------------------------
 # Args from command line
@@ -22,52 +21,87 @@ bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.delete(use_global=False)
 
 # ----------------------------
-# Add a cube as the canvas (with thickness)
+# Load image & compute aspect ratio
 # ----------------------------
-bpy.ops.mesh.primitive_cube_add(size=2)
+img = bpy.data.images.load(image_path)
+width, height = img.size
+aspect_ratio = width / height
+
+# Normalize → longer side = 1
+if aspect_ratio >= 1:
+    plane_width = 1.0
+    plane_height = 1.0 / aspect_ratio
+else:
+    plane_width = aspect_ratio
+    plane_height = 1.0
+
+# ----------------------------
+# Create plane (canvas)
+# ----------------------------
+bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
 canvas = bpy.context.active_object
 canvas.name = "Canvas"
 
-# Scale it: wide and tall, but very thin in Z (thickness)
-canvas.scale[0] = 1.0  # width
-canvas.scale[1] = 0.7  # height
-canvas.scale[2] = 0.05  # thickness (like a real frame)
+# Scale plane
+canvas.scale[0] = plane_width
+canvas.scale[1] = plane_height
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # ----------------------------
-# Create material with image texture
+# Give thickness (extrude along Z)
 # ----------------------------
-mat = bpy.data.materials.new(name="CanvasMaterial")
-mat.use_nodes = True
-bsdf = mat.node_tree.nodes["Principled BSDF"]
-
-# Add texture node
-tex_image = mat.node_tree.nodes.new('ShaderNodeTexImage')
-tex_image.image = bpy.data.images.load(image_path)
-
-# Link texture color to material base color
-mat.node_tree.links.new(bsdf.inputs['Base Color'], tex_image.outputs['Color'])
-
-# Assign material to canvas
-if canvas.data.materials:
-    canvas.data.materials[0] = mat
-else:
-    canvas.data.materials.append(mat)
+bpy.ops.object.mode_set(mode="EDIT")
+bpy.ops.mesh.select_all(action="SELECT")  # ✅ ensure all faces are selected
+bpy.ops.mesh.extrude_region_move(
+    TRANSFORM_OT_translate={"value": (0, 0, 0.02)}
+)
+bpy.ops.mesh.normals_make_consistent(inside=False)
+bpy.ops.object.mode_set(mode="OBJECT")
 
 # ----------------------------
-# UV Unwrap for proper mapping
+# Create materials
 # ----------------------------
+# Painting (front)
+painting_mat = bpy.data.materials.new(name="PaintingMaterial")
+painting_mat.use_nodes = True
+bsdf_paint = painting_mat.node_tree.nodes.get("Principled BSDF")
+tex_image = painting_mat.node_tree.nodes.new("ShaderNodeTexImage")
+tex_image.image = img
+painting_mat.node_tree.links.new(bsdf_paint.inputs["Base Color"], tex_image.outputs["Color"])
+
+# Wood (back + sides)
+wood_mat = bpy.data.materials.new(name="WoodMaterial")
+wood_mat.use_nodes = True
+bsdf_wood = wood_mat.node_tree.nodes.get("Principled BSDF")
+bsdf_wood.inputs["Base Color"].default_value = (0.4, 0.25, 0.1, 1)  # brown
+bsdf_wood.inputs["Roughness"].default_value = 0.8
+
+# Assign both materials
+canvas.data.materials.append(painting_mat)  # index 0
+canvas.data.materials.append(wood_mat)      # index 1
+
+# ----------------------------
+# Assign materials by face normal
+# ----------------------------
+mesh = canvas.data
+for poly in mesh.polygons:
+    if poly.normal.z > 0:  # front face
+        poly.material_index = 0
+    else:                  # back + sides
+        poly.material_index = 1
+
+# ----------------------------
+# Export GLB
+# ----------------------------
+# ✅ make sure object is selected before export
+bpy.ops.object.select_all(action="DESELECT")
+canvas.select_set(True)
 bpy.context.view_layer.objects.active = canvas
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.uv.smart_project()
-bpy.ops.object.mode_set(mode='OBJECT')
 
-# ----------------------------
-# Export as .glb
-# ----------------------------
 bpy.ops.export_scene.gltf(
     filepath=output_path,
-    export_format='GLB',
+    export_format="GLB",
     use_selection=True
 )
 
-print(f"✅ Exported canvas GLB: {output_path}")
+print(f"✅ Exported GLB with painting front & wood back: {output_path}")

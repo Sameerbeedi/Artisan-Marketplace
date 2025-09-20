@@ -47,6 +47,7 @@ interface StoryResult {
 export function StoryTool() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<StoryResult | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -65,13 +66,14 @@ export function StoryTool() {
     const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
     await uploadBytes(storageRef, file);
     const url = await getDownloadURL(storageRef);
-    console.log("✅ Firebase image URL:", url);
+    console.log('✅ Firebase image URL:', url);
     return url;
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setResult(null);
+    setDraftId(null);
 
     try {
       // ---------- STEP 1: Upload Image to Firebase ----------
@@ -143,9 +145,10 @@ export function StoryTool() {
             state: values.state,
             image_url: imageUrl,
             seoTags: storyData.seoTags,
+            story: storyData.creativeStory, // ✅ now saved
             price: { min: priceData.minPrice, max: priceData.maxPrice },
-            category,      // ✅ saved
-            isPainting,    // ✅ saved
+            category,
+            isPainting,
           }),
         }
       );
@@ -163,6 +166,7 @@ export function StoryTool() {
         maxPrice: priceData.maxPrice,
         reasoning: priceData.reasoning,
       });
+      setDraftId(saveData.id);
 
       toast({
         title: 'Draft saved successfully!',
@@ -293,7 +297,7 @@ export function StoryTool() {
       </Card>
 
       {/* Results */}
-      <div className="flex items-start justify-center">
+      <div className="flex flex-col items-start justify-center space-y-4">
         {isLoading && (
           <div className="text-center mt-10">
             <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
@@ -352,6 +356,18 @@ export function StoryTool() {
                   </p>
                   <p className="text-muted-foreground">{result.reasoning}</p>
                 </>
+              )}
+
+              {/* ✅ Next Button */}
+              {draftId && (
+                <Button
+                  className="mt-4"
+                  onClick={() => {
+                    window.location.href = `/product/${draftId}/ar`;
+                  }}
+                >
+                  Next →
+                </Button>
               )}
             </CardContent>
           </Card>
