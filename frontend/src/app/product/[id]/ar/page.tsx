@@ -15,6 +15,8 @@ export default function ProductARPage() {
   const [arUrl, setArUrl] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [generatingAR, setGeneratingAR] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -36,19 +38,35 @@ export default function ProductARPage() {
 
   async function generateAR() {
     setGeneratingAR(true);
+    setError(null);
+    setDebugInfo(null);
+    
     try {
+      console.log('🎯 Starting AR generation for product:', productId);
+      console.log('🖼️ Product image URL:', product?.image_url);
+      
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate_ar_model/${productId}`,
         { method: "POST" }
       );
+      
       const data = await res.json();
+      console.log('📊 AR generation response:', data);
+      
+      setDebugInfo(data);
+      
       if (data.success) {
         setArUrl(data.ar_model_url);
+        console.log('✅ AR model generated:', data.ar_model_url);
       } else {
-        alert("⚠️ AR model generation failed.");
+        const errorMsg = data.message || data.error || 'AR model generation failed';
+        setError(errorMsg);
+        console.error('❌ AR generation failed:', errorMsg);
       }
     } catch (err) {
-      console.error("❌ AR generation error:", err);
+      const errorMsg = `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      setError(errorMsg);
+      console.error('❌ AR generation error:', err);
     } finally {
       setGeneratingAR(false);
     }
@@ -114,6 +132,24 @@ export default function ProductARPage() {
             </p>
           )}
 
+          {/* 🔹 Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <h4 className="text-red-800 font-medium">AR Generation Error</h4>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* 🔹 Debug Info */}
+          {debugInfo && (
+            <details className="bg-gray-50 border rounded-lg p-4">
+              <summary className="cursor-pointer font-medium">Debug Information</summary>
+              <pre className="mt-2 text-xs overflow-auto">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </details>
+          )}
+
           {/* 🔹 Generate AR Model Button */}
           {product.isPainting && !arUrl && (
             <Button onClick={generateAR} disabled={generatingAR}>
@@ -123,16 +159,33 @@ export default function ProductARPage() {
 
           {/* 🔹 Show AR Model */}
           {arUrl && (
-            <model-viewer
-              src={arUrl}
-              ios-src={arUrl.replace(".glb", ".usdz")} // ✅ Quick Look for iOS
-              alt="3D model"
-              ar
-              ar-modes="scene-viewer quick-look webxr"
-              auto-rotate
-              camera-controls
-              style={{ width: "100%", height: "500px" }}
-            ></model-viewer>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">3D AR Model</h3>
+              <p className="text-sm text-gray-600">
+                Point your camera at a flat surface to place the 3D model in AR
+              </p>
+              <model-viewer
+                src={arUrl}
+                ios-src={arUrl.replace(".glb", ".usdz")} // ✅ Quick Look for iOS
+                alt="3D model of your product"
+                ar
+                ar-modes="scene-viewer quick-look webxr"
+                auto-rotate
+                camera-controls
+                style={{ width: "100%", height: "500px" }}
+                loading="eager"
+                onError={(e: any) => {
+                  console.error('❌ Model viewer error:', e);
+                  setError('Failed to load 3D model. The model file might be corrupted.');
+                }}
+                onLoad={() => {
+                  console.log('✅ 3D model loaded successfully');
+                }}
+              ></model-viewer>
+              <p className="text-xs text-gray-500">
+                Model URL: {arUrl}
+              </p>
+            </div>
           )}
 
           {/* 🔹 Publish Product Button */}

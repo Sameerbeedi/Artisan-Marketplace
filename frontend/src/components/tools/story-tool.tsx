@@ -22,7 +22,7 @@ import { Badge } from '../ui/badge';
 
 // 🔥 Firebase
 import { storage } from '@/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, FirebaseStorage, StorageReference } from 'firebase/storage';
 
 const formSchema = z.object({
   productTitle: z.string().min(3, 'Please enter a product title.'),
@@ -30,7 +30,7 @@ const formSchema = z.object({
   materials: z.string().min(2, 'Please enter materials used.'),
   artisan_hours: z.coerce.number().min(1, 'Enter valid artisan hours'),
   state: z.string().min(2, 'Please select a state.'),
-  productImage: z.any().optional(),
+  productImage: z.array(z.instanceof(File)).optional().default([]),
 });
 
 interface StoryResult {
@@ -63,11 +63,36 @@ export function StoryTool() {
 
   // Upload to Firebase Storage
   async function uploadImage(file: File): Promise<string> {
-    const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    console.log('✅ Firebase image URL:', url);
-    return url;
+    try {
+      if (!file) {
+        throw new Error('No file provided for upload');
+      }
+      
+      // Check if Firebase storage is available
+      if (!storage) {
+        console.log('⚠️ Firebase storage not available, using local fallback');
+        // Create a local object URL as fallback
+        const localUrl = URL.createObjectURL(file);
+        console.log('✅ Local image URL:', localUrl);
+        return localUrl;
+      }
+      
+      const storageRef = ref(storage, `products/${Date.now()}-${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      console.log('✅ Firebase image URL:', url);
+      return url;
+    } catch (error) {
+      console.error('❌ Upload failed:', error);
+      // Fallback to local URL if Firebase fails
+      try {
+        const localUrl = URL.createObjectURL(file);
+        console.log('✅ Fallback local image URL:', localUrl);
+        return localUrl;
+      } catch (fallbackError) {
+        throw new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -78,14 +103,14 @@ export function StoryTool() {
     try {
       // ---------- STEP 1: Upload Image to Firebase ----------
       let imageUrl: string | undefined;
-      if (values.productImage?.[0]) {
+      if (values.productImage && values.productImage.length > 0 && values.productImage[0]) {
         imageUrl = await uploadImage(values.productImage[0]);
       }
 
       // ---------- STEP 2: Classify product ----------
       const formData = new FormData();
       formData.append('productTitle', values.productTitle);
-      if (values.productImage?.[0]) {
+      if (values.productImage && values.productImage.length > 0 && values.productImage[0]) {
         formData.append('file', values.productImage[0]);
       }
 
@@ -274,9 +299,10 @@ export function StoryTool() {
                       <Input
                         type="file"
                         accept="image/*"
-                        onChange={(e) =>
-                          field.onChange(e.target.files as FileList)
-                        }
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          field.onChange(files ? Array.from(files) : []);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />

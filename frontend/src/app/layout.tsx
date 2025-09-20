@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Header } from '../components/layout/header';
 import { Footer } from '../components/layout/footer';
 import { Toaster } from '../components/ui/toaster';
+import { AuthProvider } from '../contexts/AuthContext';
 import Script from 'next/script'; // ✅ Next.js Script for <model-viewer>
 
 const belleza = Belleza({
@@ -46,12 +47,14 @@ export default function RootLayout({
           alegreya.variable
         )}
       >
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
-        <Toaster />
+        <AuthProvider>
+          <div className="relative flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
