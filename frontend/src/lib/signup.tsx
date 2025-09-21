@@ -7,7 +7,7 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, db } from '../firebase';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,10 @@ export default function SignupForm() {
     setIsLoading(true);
 
     try {
+      if (!auth || !db) {
+        throw new Error('Firebase services not available');
+      }
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -69,6 +73,10 @@ export default function SignupForm() {
   const handleGoogleSignup = async () => {
     setIsGoogleLoading(true);
     try {
+      if (!auth || !db) {
+        throw new Error('Firebase services not available');
+      }
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
