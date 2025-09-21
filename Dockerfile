@@ -1,11 +1,23 @@
 # Use Python 3.11 slim image as base
 FROM python:3.11-slim
 
-# Install system dependencies for Blender (absolute minimal)
+# Install system dependencies for Blender (with required graphics libraries)
 RUN apt-get update && apt-get install -y \
     wget \
     xz-utils \
     xvfb \
+    libgl1-mesa-dri \
+    libglu1-mesa \
+    libxrender1 \
+    libxi6 \
+    libxrandr2 \
+    libxss1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxinerama1 \
+    libxcursor1 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install Blender 4.0 (headless compatible version)
