@@ -445,17 +445,24 @@ export default function MarketplacePage() {
       {/* Products Grid */}
       {filteredProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-          {filteredProducts.map((product: any) => (
-            <ProductCard key={product.id} product={{
-              id: product.id.toString(),
-              name: product.name,
-              price: product.price,
-              imageUrl: product.imageUrl,
-              artisan: product.artisan,
-              category: product.category,
-              aiHint: '',
-            }} />
-          ))}
+          {filteredProducts
+            .filter((product: any) => product && product.id) // Filter out products without valid IDs
+            .map((product: any) => (
+              <ProductCard 
+                key={product.id} 
+                product={{
+                  id: product.id?.toString() || '',
+                  name: product.name || 'Untitled Product',
+                  price: typeof product.price === 'object' && product.price !== null 
+                    ? (product.price.min || product.price.max || 0)
+                    : (typeof product.price === 'number' ? product.price : 0),
+                  imageUrl: product.imageUrl || '',
+                  artisan: product.artisan || 'Unknown Artisan',
+                  category: product.category || 'Uncategorized',
+                  aiHint: product.aiHint || '',
+                }} 
+              />
+            ))}
         </div>
       ) : (
         <div className="text-center py-12">
