@@ -55,14 +55,15 @@ export default function ARViewer({
       {showARInstructions && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 text-white p-4">
           <div className="max-w-md mx-auto text-center">
-            <div className="text-2xl mb-2">🏠</div>
-            <h3 className="font-bold mb-2">Wall Placement Mode</h3>
-            <p className="text-sm mb-2">📱 Point your camera at a wall</p>
-            <p className="text-sm mb-2">🔄 Move slowly until you see wall detection</p>
-            <p className="text-sm mb-2">👆 TAP on the wall to place artwork</p>
+            <div className="text-2xl mb-2">🖼️</div>
+            <h3 className="font-bold mb-2">AR Placement Mode</h3>
+            <p className="text-sm mb-2">📱 Point camera at wall or surface</p>
+            <p className="text-sm mb-2">🔄 Move device to detect surfaces</p>
+            <p className="text-sm mb-2">👆 TAP where you want the artwork</p>
+            <p className="text-sm mb-2">✋ PINCH to resize, DRAG to move</p>
             <div className="flex justify-center mt-3">
               <div className="animate-pulse bg-white/20 px-3 py-1 rounded-full text-xs">
-                Look for wall surfaces, not floors!
+                Works best on walls and vertical surfaces!
               </div>
             </div>
           </div>
@@ -100,21 +101,22 @@ export default function ARViewer({
           alt={altText}
           ar
           ar-modes="webxr scene-viewer quick-look"
-          ar-scale="fixed"
+          ar-scale="auto"
           camera-controls
           style={{ width: "100%", height: "600px" }}
-          ar-placement="wall"
+          ar-placement="wall floor"
           environment-image="legacy"
           shadow-intensity="0.3"
           shadow-softness="1"
-          min-camera-orbit="auto auto 1m"
-          max-camera-orbit="auto auto 3m"
-          camera-orbit="0deg 90deg 2m"
+          camera-orbit="0deg 75deg 2m"
           field-of-view="45deg"
           loading="eager"
-          touch-action="pan-y"
+          touch-action="manipulation"
           interaction-prompt="auto"
           interaction-prompt-style="wiggle"
+          auto-rotate
+          auto-rotate-delay="0"
+          rotation-per-second="30deg"
           onLoad={handleLoad}
           onError={handleLoadError}
         >
@@ -140,12 +142,13 @@ export default function ARViewer({
         <div className="flex items-start space-x-2">
           <span className="text-blue-600 text-lg">📱</span>
           <div>
-            <h4 className="font-semibold text-blue-800 text-sm">AR Wall Placement Tips:</h4>
+            <h4 className="font-semibold text-blue-800 text-sm">AR Placement Guide:</h4>
             <ul className="text-xs text-blue-700 mt-1 space-y-1">
-              <li>• Point camera at a wall (not floor or ceiling)</li>
-              <li>• Move slowly until wall detection appears</li>
-              <li>• Tap anywhere on the detected wall surface</li>
-              <li>• Artwork will attach to that exact spot</li>
+              <li>• Point camera at any surface (walls work best)</li>
+              <li>• Wait for surface detection (white dots/plane)</li>
+              <li>• Tap anywhere on detected surface to place</li>
+              <li>• Pinch to resize, drag to reposition artwork</li>
+              <li>• Try different angles if detection fails</li>
             </ul>
           </div>
         </div>
