@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { KalaaVerseLogo } from '../icons';
+import { ShoppingCart } from 'lucide-react';
+
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -11,7 +13,7 @@ import {
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
 import { Languages, Menu, UserPlus, User, LogOut, Palette, ShoppingBag } from 'lucide-react';
-import { useState } from 'react';
+import {useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '../ui/sheet';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
@@ -38,6 +40,29 @@ export function Header() {
     { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
     { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
   ];
+
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const totalItems = storedCart.reduce(
+        (sum: number, item: any) => sum + item.quantity,
+        0
+      );
+      setCartCount(totalItems);
+    };
+
+    updateCartCount();
+
+    // ✅ Listen for cart updates
+    window.addEventListener("cartUpdated", updateCartCount);
+
+    return () => {
+      window.removeEventListener("cartUpdated", updateCartCount);
+    };
+  }, []);
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -97,6 +122,18 @@ export function Header() {
           </DropdownMenu>
 
           <div className='hidden md:flex items-center gap-2'>
+            {/* Cart Button */}
+            <Link href="/cart">
+            <Button variant="outline" className="relative flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              <span>Cart</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </Button>
+          </Link>
             {!isAuthenticated ? (
               <>
                 <Button variant="ghost" onClick={() => setShowAuthModal(true)}>
@@ -192,6 +229,19 @@ export function Header() {
                       </Link>
                     );
                   })}
+
+                  <Link
+                    href="/cart"
+                    className="relative text-lg font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Cart
+                    {cartCount > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
                 </nav>
                 <div className='mt-auto p-6'>
                   <Separator className='mb-4'/>

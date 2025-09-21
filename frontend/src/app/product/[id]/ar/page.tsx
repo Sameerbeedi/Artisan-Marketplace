@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input"; // ✅ added Input
+
 
 export default function ProductARPage() {
   const params = useParams();
+  const router = useRouter();
   const productId = params?.id as string;
 
   const [product, setProduct] = useState<any>(null);
@@ -17,6 +20,9 @@ export default function ProductARPage() {
   const [generatingAR, setGeneratingAR] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [userPrice, setUserPrice] = useState(""); // ✅ new state
+  const [priceError, setPriceError] = useState<string | null>(null); // ✅ inline error
+
 
   const backendBase = typeof window !== 'undefined'
     ? `http://${window.location.hostname}:9079`
@@ -72,17 +78,33 @@ export default function ProductARPage() {
   }
 
   async function publishProduct() {
+    const price = parseFloat(userPrice);
+
+    if (isNaN(price) || price <= 0) {
+      setPriceError("❌ Please enter a valid positive price.");
+      return;
+    }
+    setPriceError(null);
+
     setPublishing(true);
     try {
-      const res = await fetch(`${backendBase}/publish_product/${productId}`, { method: "POST" });
+      const res = await fetch(`${backendBase}/publish_product/${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price }),
+      });
       const data = await res.json();
-      alert(`✅ Product published: ${data.id}`);
+      alert(`✅ Product published at ₹${price}: ${data.id}`);
+
+      // ✅ redirect to marketplace after publish
+      router.push("/marketplace");
     } catch (err) {
       console.error("❌ Publish error:", err);
     } finally {
       setPublishing(false);
     }
   }
+
 
   if (loading) return <p>Loading...</p>;
 
@@ -184,14 +206,31 @@ export default function ProductARPage() {
             </div>
           )}
 
-          {/* 🔹 Publish Product Button */}
-          <Button
-            onClick={publishProduct}
-            disabled={publishing}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {publishing ? "Publishing..." : "Publish Product"}
-          </Button>
+          {/* 🔹 User Price Input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Enter your price
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                value={userPrice}
+                onChange={(e) => setUserPrice(e.target.value)}
+                placeholder="e.g. 1500"
+                className="w-40"
+              />
+              <Button
+                onClick={publishProduct}
+                disabled={publishing}
+                className="bg-orange-500 hover:bg-orange-600"
+              >
+                {publishing ? "Publishing..." : "Publish Product"}
+              </Button>
+            </div>
+            {priceError && (
+              <p className="text-red-600 text-sm">{priceError}</p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

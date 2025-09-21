@@ -40,7 +40,7 @@ app.add_middleware(
 
 # Import and include routes
 try:
-    from .routes import router as api_router
+    from routes import router as api_router
 except ImportError:
     from routes import router as api_router
 
