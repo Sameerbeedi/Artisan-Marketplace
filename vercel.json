@@ -11,7 +11,7 @@
     "NEXT_PUBLIC_FIREBASE_SENDER_ID": "@firebase_sender_id",
     "NEXT_PUBLIC_FIREBASE_APP_ID": "@firebase_app_id",
     "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID": "@firebase_measurement_id",
-    "NEXT_PUBLIC_BACKEND_URL": "@backend_url",
+    "NEXT_PUBLIC_BACKEND_URL": "https://your-railway-backend.railway.app",
     "GOOGLE_API_KEY": "@google_api_key"
   }
 }

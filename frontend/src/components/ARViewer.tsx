@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ARViewer({
   modelUrl,
@@ -11,6 +11,31 @@ export default function ARViewer({
 }) {
   const [loadError, setLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isARActive, setIsARActive] = useState(false);
+  const [showARInstructions, setShowARInstructions] = useState(false);
+
+  useEffect(() => {
+    // Detect when AR mode is activated
+    const handleARStatus = () => {
+      const modelViewer = document.querySelector('model-viewer');
+      if (modelViewer) {
+        modelViewer.addEventListener('ar-status', (event: any) => {
+          if (event.detail.status === 'session-started') {
+            setIsARActive(true);
+            setShowARInstructions(true);
+            // Hide instructions after 8 seconds
+            setTimeout(() => setShowARInstructions(false), 8000);
+          } else if (event.detail.status === 'not-presenting') {
+            setIsARActive(false);
+            setShowARInstructions(false);
+          }
+        });
+      }
+    };
+
+    // Add event listener after component mounts
+    setTimeout(handleARStatus, 1000);
+  }, []);
 
   const handleLoadError = () => {
     console.log('Model failed to load:', modelUrl);
@@ -26,6 +51,24 @@ export default function ARViewer({
 
   return (
     <div className="relative">
+      {/* AR Instructions Overlay */}
+      {showARInstructions && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 text-white p-4">
+          <div className="max-w-md mx-auto text-center">
+            <div className="text-2xl mb-2">🏠</div>
+            <h3 className="font-bold mb-2">Wall Placement Mode</h3>
+            <p className="text-sm mb-2">📱 Point your camera at a wall</p>
+            <p className="text-sm mb-2">🔄 Move slowly until you see wall detection</p>
+            <p className="text-sm mb-2">👆 TAP on the wall to place artwork</p>
+            <div className="flex justify-center mt-3">
+              <div className="animate-pulse bg-white/20 px-3 py-1 rounded-full text-xs">
+                Look for wall surfaces, not floors!
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
           <div className="text-center">
@@ -61,9 +104,6 @@ export default function ARViewer({
           camera-controls
           style={{ width: "100%", height: "600px" }}
           ar-placement="wall"
-          ar-hit-test="wall"
-          interaction-prompt="auto"
-          interaction-prompt-style="basic"
           environment-image="legacy"
           shadow-intensity="0.3"
           shadow-softness="1"
@@ -72,17 +112,44 @@ export default function ARViewer({
           camera-orbit="0deg 90deg 2m"
           field-of-view="45deg"
           loading="eager"
+          touch-action="pan-y"
+          interaction-prompt="auto"
+          interaction-prompt-style="wiggle"
           onLoad={handleLoad}
           onError={handleLoadError}
         >
           <div slot="poster" className="flex items-center justify-center h-full bg-gray-100">
             <div className="text-center">
-              <div className="animate-pulse text-2xl mb-2">�</div>
+              <div className="animate-pulse text-2xl mb-2">🎨</div>
               <p className="text-sm text-gray-600">Preparing your unique AR experience...</p>
             </div>
           </div>
+          
+          <button
+            slot="ar-button"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg flex items-center space-x-2 transition-colors"
+          >
+            <span>📱</span>
+            <span>View on Wall in AR</span>
+          </button>
         </model-viewer>
       )}
+      
+      {/* AR Usage Instructions */}
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start space-x-2">
+          <span className="text-blue-600 text-lg">📱</span>
+          <div>
+            <h4 className="font-semibold text-blue-800 text-sm">AR Wall Placement Tips:</h4>
+            <ul className="text-xs text-blue-700 mt-1 space-y-1">
+              <li>• Point camera at a wall (not floor or ceiling)</li>
+              <li>• Move slowly until wall detection appears</li>
+              <li>• Tap anywhere on the detected wall surface</li>
+              <li>• Artwork will attach to that exact spot</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
