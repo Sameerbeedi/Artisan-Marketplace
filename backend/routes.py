@@ -326,8 +326,16 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
             raise HTTPException(status_code=500, detail="Blender not found. Install Blender 4.x or add it to PATH")
     elif system == "Darwin":  # macOS
         blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
-    else:  # Linux
-        blender_exe = "blender"
+    else:  # Linux (including Docker containers)
+        # Check common Docker/Linux paths first
+        possible_linux_paths = [
+            "/usr/local/bin/blender",  # Docker symlink location
+            "/opt/blender/blender",    # Docker installation location
+            "blender"                  # System PATH
+        ]
+        blender_exe = next((p for p in possible_linux_paths if os.path.exists(p) or shutil.which(p)), None)
+        if not blender_exe:
+            blender_exe = "blender"  # Fallback to PATH
     
     # Use absolute path to the Blender script to avoid CWD issues
     script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "blender_scripts", "generate_canvas_glb.py"))

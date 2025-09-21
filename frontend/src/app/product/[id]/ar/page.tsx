@@ -24,9 +24,7 @@ export default function ProductARPage() {
   const [priceError, setPriceError] = useState<string | null>(null); // ✅ inline error
 
 
-  const backendBase = typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:9079`
-    : (process.env.NEXT_PUBLIC_BACKEND_URL || '');
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-production.up.railway.app';
 
   useEffect(() => {
     async function fetchProduct() {

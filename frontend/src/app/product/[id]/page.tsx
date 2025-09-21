@@ -12,10 +12,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [cartMessage, setCartMessage] = useState<string | null>(null);
 
-  const backendBase =
-    typeof window !== "undefined"
-      ? `http://${window.location.hostname}:9079`
-      : process.env.NEXT_PUBLIC_BACKEND_URL || "";
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || "https://artisan-marketplace-production.up.railway.app";
 
   useEffect(() => {
     async function fetchProduct() {

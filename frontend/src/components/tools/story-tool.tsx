@@ -52,10 +52,8 @@ export function StoryTool() {
   const [draftId, setDraftId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Backend base URL – environment first, then fallback to current host on LAN
-  const backendBase = typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:9079`
-    : (process.env.NEXT_PUBLIC_BACKEND_URL || '');
+  // Backend base URL
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-production.up.railway.app';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
