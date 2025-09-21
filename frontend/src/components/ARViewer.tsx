@@ -17,6 +17,10 @@ export default function ARViewer({
       ar-placement="wall"
       camera-controls
       style={{ width: "100%", height: "600px" }}
+      shadow-intensity="0.3"
+      shadow-softness="0.8"
+      environment-image="legacy"
+      loading="eager"
     >
       <button slot="ar-button" style={{
         backgroundColor: '#3b82f6',
