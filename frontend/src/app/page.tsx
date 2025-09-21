@@ -1,10 +1,14 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Sparkles, Heart, Shield, Truck, Star } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export default function HomePage() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -15,29 +19,26 @@ export default function HomePage() {
               <div className="space-y-4">
                 <Badge variant="outline" className="w-fit">
                   <Sparkles className="mr-1 h-3 w-3" />
-                  AI-Powered Marketplace
+                  {t('hero.badge')}
                 </Badge>
                 <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900">
-                  Discover
-                  <span className="text-primary block">Authentic</span>
-                  Artisan Crafts
+                  {t('hero.title')}
                 </h1>
                 <p className="text-xl text-gray-600 max-w-lg">
-                  Connect with skilled artisans and find unique, handcrafted products 
-                  with the help of AI-powered recommendations tailored just for you.
+                  {t('hero.subtitle')}
                 </p>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button asChild size="lg" className="text-lg px-8">
                   <Link href="/marketplace">
-                    Explore Marketplace
+                    {t('hero.exploreMarketplace')}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg" className="text-lg px-8">
                   <Link href="/tools">
-                    Artisan Tools
+                    {t('hero.artisanTools')}
                   </Link>
                 </Button>
               </div>
@@ -45,11 +46,11 @@ export default function HomePage() {
               <div className="flex items-center gap-6 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Heart className="h-4 w-4 text-red-500" />
-                  <span>1000+ Happy Customers</span>
+                  <span>{t('hero.happyCustomers')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-yellow-500" />
-                  <span>4.9/5 Rating</span>
+                  <span>{t('hero.rating')}</span>
                 </div>
               </div>
             </div>
@@ -91,10 +92,10 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Our Marketplace?
+              {t('features.title')}
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Experience the perfect blend of traditional craftsmanship and modern technology
+              {t('features.subtitle')}
             </p>
           </div>
 

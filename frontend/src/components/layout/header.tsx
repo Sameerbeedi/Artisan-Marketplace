@@ -18,17 +18,27 @@ import { Separator } from '../ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from '../auth/AuthModal';
 import { Badge } from '../ui/badge';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 const navLinks = [
-  { href: '/marketplace', label: 'Marketplace', requiresAuth: false },
-  { href: '/tools', label: 'Artisan Tools', requiresAuth: true, artistOnly: true },
-  { href: '/#features', label: 'Features', requiresAuth: false },
+  { href: '/marketplace', label: 'nav.marketplace', requiresAuth: false },
+  { href: '/tools', label: 'nav.tools', requiresAuth: true, artistOnly: true },
+  { href: '/#features', label: 'nav.features', requiresAuth: false },
 ];
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { isAuthenticated, isArtist, userProfile, signOut, loading } = useAuth();
+  const { language, setLanguage, t } = useTranslation();
+
+  const languages = [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+    { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
+    { code: 'bn', name: 'Bengali', nativeName: 'বাংলা' },
+    { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
+  ];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,7 +58,7 @@ export function Header() {
                   className="text-muted-foreground/50 cursor-not-allowed"
                   title="Artist account required"
                 >
-                  {link.label}
+                  {t(link.label)}
                 </span>
               );
             }
@@ -59,7 +69,7 @@ export function Header() {
                 href={link.href}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
-                {link.label}
+                {t(link.label)}
               </Link>
             );
           })}
@@ -75,10 +85,15 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>English</DropdownMenuItem>
-              <DropdownMenuItem>हिन्दी (Hindi)</DropdownMenuItem>
-              <DropdownMenuItem>தமிழ் (Tamil)</DropdownMenuItem>
-              <DropdownMenuItem>বাংলা (Bengali)</DropdownMenuItem>
+              {languages.map((lang) => (
+                <DropdownMenuItem 
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code as any)}
+                  className={`cursor-pointer ${language === lang.code ? 'bg-primary/10 text-primary' : ''}`}
+                >
+                  {lang.nativeName}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -86,10 +101,10 @@ export function Header() {
             {!isAuthenticated ? (
               <>
                 <Button variant="ghost" onClick={() => setShowAuthModal(true)}>
-                  Sign In
+                  {t('nav.signIn')}
                 </Button>
                 <Button onClick={() => setShowAuthModal(true)}>
-                  Sign Up
+                  {t('nav.signUp')}
                 </Button>
               </>
             ) : (
@@ -125,7 +140,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    {t('nav.signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -162,7 +177,7 @@ export function Header() {
                           className="text-lg font-medium text-muted-foreground/50 cursor-not-allowed"
                           title="Artist account required"
                         >
-                          {link.label}
+                          {t(link.label)}
                         </span>
                       );
                     }
@@ -174,7 +189,7 @@ export function Header() {
                         className="text-lg font-medium text-muted-foreground transition-colors hover:text-foreground"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        {link.label}
+                        {t(link.label)}
                       </Link>
                     );
                   })}
@@ -188,14 +203,14 @@ export function Header() {
                         setIsMobileMenuOpen(false);
                       }}>
                         <User className="mr-2 h-4 w-4" />
-                        Sign In
+                        {t('nav.signIn')}
                       </Button>
                       <Button className='w-full' onClick={() => {
                         setShowAuthModal(true);
                         setIsMobileMenuOpen(false);
                       }}>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Sign Up
+                        {t('nav.signUp')}
                       </Button>
                     </div>
                   ) : (
@@ -223,7 +238,7 @@ export function Header() {
                         setIsMobileMenuOpen(false);
                       }}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
+                        {t('nav.signOut')}
                       </Button>
                     </div>
                   )}
