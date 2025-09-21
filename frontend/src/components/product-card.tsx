@@ -31,11 +31,21 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const [imgError, setImgError] = useState(false);
 
-  // ✅ Pick URL
+  // Debug logging
+  console.log('ProductCard Debug:', {
+    productId: product.id,
+    originalImageUrl: product.imageUrl,
+    imgError,
+    productName: product.name
+  });
+
+  // ✅ Pick URL with reliable fallback
   const imageUrl =
     !imgError && product.imageUrl
       ? product.imageUrl
-      : "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=500&fit=crop";
+      : "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=500&fit=crop&auto=format";
+
+  console.log('Final imageUrl used:', imageUrl);
 
   return (
     <Card className="group flex flex-col overflow-hidden h-full transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -50,7 +60,12 @@ export function ProductCard({ product }: ProductCardProps) {
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               data-ai-hint={product.aiHint}
               onError={() => {
-                console.warn("❌ Next.js Image failed for:", imageUrl);
+                console.error("❌ Next.js Image failed for:", {
+                  url: imageUrl,
+                  productId: product.id,
+                  productName: product.name,
+                  originalUrl: product.imageUrl
+                });
                 setImgError(true); // switch to fallback <img>
               }}
             />
@@ -86,7 +101,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-xs font-semibold text-primary">
-                {product.artisan.charAt(0).toUpperCase()}
+                {product.artisan?.charAt(0)?.toUpperCase() || 'A'}
               </span>
             </div>
             <span className="text-xs text-muted-foreground">By</span>
@@ -94,14 +109,18 @@ export function ProductCard({ product }: ProductCardProps) {
               variant="outline"
               className="text-xs font-medium text-primary border-primary/30"
             >
-              {product.artisan}
+              {product.artisan || 'Unknown Artisan'}
             </Badge>
           </div>
         </div>
       </CardContent>
 
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
-        <p className="text-xl font-semibold text-primary">₹{product.price}</p>
+        <p className="text-xl font-semibold text-primary">
+          ₹{typeof product.price === 'object' && product.price !== null 
+            ? (product.price as any)?.min || (product.price as any)?.max || 0
+            : product.price || 0}
+        </p>
         {/* ✅ View Details now links to /product/[id] */}
         <Button variant="secondary" asChild>
           <Link href={`/product/${product.id}`}>View Details</Link>
