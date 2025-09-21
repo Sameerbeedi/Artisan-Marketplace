@@ -53,18 +53,30 @@ export default function ARViewer({
     <div className="relative">
       {/* AR Instructions Overlay */}
       {showARInstructions && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-black/80 text-white p-4">
-          <div className="max-w-md mx-auto text-center">
-            <div className="text-2xl mb-2">🖼️</div>
-            <h3 className="font-bold mb-2">AR Placement Mode</h3>
-            <p className="text-sm mb-2">📱 Point camera at wall or surface</p>
-            <p className="text-sm mb-2">🔄 Move device to detect surfaces</p>
-            <p className="text-sm mb-2">👆 TAP where you want the artwork</p>
-            <p className="text-sm mb-2">✋ PINCH to resize, DRAG to move</p>
-            <div className="flex justify-center mt-3">
-              <div className="animate-pulse bg-white/20 px-3 py-1 rounded-full text-xs">
-                Works best on walls and vertical surfaces!
+        <div className="fixed top-0 left-0 right-0 z-50 bg-black/90 text-white p-4">
+          <div className="max-w-sm mx-auto text-center">
+            <div className="text-3xl mb-3">🏠</div>
+            <h3 className="font-bold mb-3 text-lg">Wall Placement Guide</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-center space-x-2">
+                <span>📱</span>
+                <span>Hold phone VERTICALLY</span>
               </div>
+              <div className="flex items-center justify-center space-x-2">
+                <span>🎯</span>
+                <span>Point DIRECTLY at wall (3-6 feet away)</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <span>🔄</span>
+                <span>Move left/right until WHITE DOTS appear</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2">
+                <span>👆</span>
+                <span>TAP where dots appear on wall</span>
+              </div>
+            </div>
+            <div className="mt-4 p-2 bg-yellow-600/80 rounded text-xs">
+              💡 Need good lighting! Try different wall sections if detection fails.
             </div>
           </div>
         </div>
@@ -100,23 +112,21 @@ export default function ARViewer({
           src={modelUrl}
           alt={altText}
           ar
-          ar-modes="webxr scene-viewer quick-look"
-          ar-scale="auto"
+          ar-modes="scene-viewer quick-look"
           camera-controls
           style={{ width: "100%", height: "600px" }}
           ar-placement="wall floor"
+          ar-scale="auto"
           environment-image="legacy"
-          shadow-intensity="0.3"
-          shadow-softness="1"
-          camera-orbit="0deg 75deg 2m"
-          field-of-view="45deg"
+          shadow-intensity="0.4"
+          shadow-softness="0.8"
+          camera-orbit="0deg 75deg 2.5m"
+          field-of-view="35deg"
           loading="eager"
           touch-action="manipulation"
           interaction-prompt="auto"
           interaction-prompt-style="wiggle"
-          auto-rotate
-          auto-rotate-delay="0"
-          rotation-per-second="30deg"
+          reveal="interaction"
           onLoad={handleLoad}
           onError={handleLoadError}
         >
@@ -138,18 +148,32 @@ export default function ARViewer({
       )}
       
       {/* AR Usage Instructions */}
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start space-x-2">
-          <span className="text-blue-600 text-lg">📱</span>
+      <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 rounded-lg">
+        <div className="flex items-start space-x-3">
+          <span className="text-blue-600 text-2xl">📱</span>
           <div>
-            <h4 className="font-semibold text-blue-800 text-sm">AR Placement Guide:</h4>
-            <ul className="text-xs text-blue-700 mt-1 space-y-1">
-              <li>• Point camera at any surface (walls work best)</li>
-              <li>• Wait for surface detection (white dots/plane)</li>
-              <li>• Tap anywhere on detected surface to place</li>
-              <li>• Pinch to resize, drag to reposition artwork</li>
-              <li>• Try different angles if detection fails</li>
-            </ul>
+            <h4 className="font-bold text-blue-800 text-base mb-2">Mobile Wall Placement Steps:</h4>
+            <ol className="text-sm text-blue-700 space-y-2">
+              <li className="flex items-start space-x-2">
+                <span className="font-bold text-blue-600">1.</span>
+                <span><strong>Position:</strong> Hold phone vertically, point at wall 3-6 feet away</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="font-bold text-blue-600">2.</span>
+                <span><strong>Detect:</strong> Move left/right slowly until white dots appear on wall</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="font-bold text-blue-600">3.</span>
+                <span><strong>Place:</strong> Tap anywhere on the detected wall surface</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <span className="font-bold text-blue-600">4.</span>
+                <span><strong>Adjust:</strong> Pinch to resize, drag to reposition</span>
+              </li>
+            </ol>
+            <div className="mt-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs text-yellow-800">
+              <strong>Tips:</strong> Good lighting helps • Try different wall sections • White/light colored walls work best
+            </div>
           </div>
         </div>
       </div>
