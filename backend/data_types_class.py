@@ -1,6 +1,9 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
+# ------------------------
+# Catalog Product Models
+# ------------------------
 class CatalogProductInput(BaseModel):
     photoDataUri: str = Field(
         ...,
@@ -16,6 +19,9 @@ class CatalogProductOutput(BaseModel):
         ..., description="Confidence level of the category prediction (0 to 1)."
     )
 
+# ------------------------
+# Heritage Storytelling Models
+# ------------------------
 class HeritageStorytellingInput(BaseModel):
     artisanBackground: str = Field(..., description="Description of the artisan's background.")
     familyTraditions: str = Field(..., description="Description of the artisan's family traditions.")
@@ -25,6 +31,9 @@ class HeritageStorytellingInput(BaseModel):
 class HeritageStorytellingOutput(BaseModel):
     heritageStory: str = Field(..., description="A compelling heritage story for the artisan.")
 
+# ------------------------
+# Process Documentation Models
+# ------------------------
 class GenerateProcessDocumentationInput(BaseModel):
     craftName: str = Field(..., description="The name of the craft.")
     craftDescription: str = Field(
@@ -39,6 +48,9 @@ class GenerateProcessDocumentationOutput(BaseModel):
         ..., description="A detailed, step-by-step description of the craft process with cultural context."
     )
 
+# ------------------------
+# Product Storytelling Models
+# ------------------------
 class ProductStorytellingInput(BaseModel):
     productTitle: str = Field(..., description="The title of the product.")
     productDescription: str = Field(..., description="A short description of the product.")
@@ -47,6 +59,9 @@ class ProductStorytellingOutput(BaseModel):
     creativeStory: str = Field(..., description="A creative and compelling story about the product.")
     seoTags: List[str] = Field(..., description="A list of SEO-friendly tags or hashtags.")
 
+# ------------------------
+# Product Photo Analysis Models
+# ------------------------
 class AnalyzeProductPhotoInput(BaseModel):
     photoDataUri: str = Field(
         ...,
@@ -66,6 +81,9 @@ class AnalyzeProductPhotoOutput(BaseModel):
         ..., description="Suggestions for improving the product photo."
     )
 
+# ------------------------
+# Technique Identification Models
+# ------------------------
 class IdentifyTechniqueInput(BaseModel):
     photoDataUri: str = Field(
         ...,
@@ -84,6 +102,23 @@ class IdentifyTechniqueOutput(BaseModel):
         ..., description="An array of confidence levels for each identified technique."
     )
 
+# ------------------------
+# Price Estimation Models
+# ------------------------
+class PriceEstimationInput(BaseModel):
+    category: str = Field(..., description="The product category, e.g., pottery, textiles, jewelry.")
+    materials: str = Field(..., description="The materials used in the product.")
+    artisan_hours: int = Field(..., description="The total artisan hours spent crafting the product.")
+    state: str = Field(..., description="The Indian state where the artisan is based.")
+
+class PriceEstimationOutput(BaseModel):
+    minPrice: float = Field(..., description="Suggested minimum fair price in INR (₹).")
+    maxPrice: float = Field(..., description="Suggested maximum fair price in INR (₹).")
+    reasoning: str = Field(..., description="Reasoning behind the price estimation.")
+
+# ------------------------
+# Recommendation Models
+# ------------------------
 class PriceRange(BaseModel):
     min: float
     max: float
@@ -106,9 +141,8 @@ class RecommendationRequest(BaseModel):
     maxResults: int = 5
     excludeProducts: Optional[List[str]] = None
 
-
 # ------------------------
-# Output Schemas - SINGLE DEFINITIONS ONLY
+# Recommendation Response Models
 # ------------------------
 class Product(BaseModel):
     id: str
@@ -139,15 +173,13 @@ class RecommendationResponse(BaseModel):
     categories: List[str]
     suggestedFilters: Optional[SuggestedFilters] = None
 
-
 # ------------------------
-# User Profile Model
+# User Profile Models
 # ------------------------
 class Demographics(BaseModel):
     age: Optional[int] = None
     location: Optional[str] = None
     interests: Optional[List[str]] = None
-
 
 class UserProfile(BaseModel):
     id: str

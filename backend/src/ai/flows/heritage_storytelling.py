@@ -7,7 +7,10 @@ An AI agent for crafting heritage stories for artisans.
 - HeritageStorytellingOutput: Output type for generate_heritage_story.
 """
 
-from backend.data_types_class import HeritageStorytellingInput, HeritageStorytellingOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import HeritageStorytellingInput, HeritageStorytellingOutput
 
 # Mock AI storytelling function (replace with LLM integration)
 async def ai_generate_story(input: HeritageStorytellingInput) -> HeritageStorytellingOutput:

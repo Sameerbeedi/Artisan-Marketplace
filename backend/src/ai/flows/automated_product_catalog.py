@@ -7,7 +7,10 @@ An AI agent that automatically categorizes crafts based on image recognition.
 - CatalogProductOutput: Output type for catalog_product.
 """
 
-from backend.data_types_class import CatalogProductInput, CatalogProductOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import CatalogProductInput, CatalogProductOutput
 import base64
 
 # Mock AI model function (replace with real AI inference)

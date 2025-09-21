@@ -7,7 +7,10 @@ A flow for identifying traditional techniques used in crafts.
 - IdentifyTechniqueOutput: Output type.
 """
 
-from backend.data_types_class import IdentifyTechniqueInput, IdentifyTechniqueOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import IdentifyTechniqueInput, IdentifyTechniqueOutput
 import base64
 
 # Mock AI function (replace with real AI/vision integration)
