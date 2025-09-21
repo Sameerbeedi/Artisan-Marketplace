@@ -11,6 +11,13 @@ node_modules/
 __pycache__/
 *.pyc
 
+# package manager lock files (to prevent merge conflicts)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-lock.yaml
+bun.lockb
+
 # testing
 /coverage
 
@@ -57,3 +64,75 @@ backend/firebase_service_account.json
 
 # python venv
 venv/
+
+# IDE and Editor files (common merge conflict sources)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+*~
+.#*
+\#*#
+.*.swp
+.*.swo
+
+# Build artifacts and cache
+dist/
+build/
+.cache/
+.parcel-cache/
+.turbo/
+.nuxt/
+.svelte-kit/
+
+# Generated files
+public/models/generated/*.glb
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/

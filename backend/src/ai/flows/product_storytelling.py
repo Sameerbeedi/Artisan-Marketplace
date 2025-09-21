@@ -1,6 +1,9 @@
 # backend/src/ai/flows/product_storytelling.py
 
-from backend.data_types_class import ProductStorytellingInput, ProductStorytellingOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import ProductStorytellingInput, ProductStorytellingOutput
 import google.generativeai as genai
 import os
 import json

@@ -42,6 +42,8 @@ interface StoryResult {
   minPrice?: number;
   maxPrice?: number;
   reasoning?: string;
+  arModelUrl?: string;
+  arGenerationStatus?: 'generating' | 'success' | 'failed' | 'not-applicable';
 }
 
 export function StoryTool() {
@@ -49,6 +51,11 @@ export function StoryTool() {
   const [result, setResult] = useState<StoryResult | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Backend base URL – environment first, then fallback to current host on LAN
+  const backendBase = typeof window !== 'undefined'
+    ? `http://${window.location.hostname}:9079`
+    : (process.env.NEXT_PUBLIC_BACKEND_URL || '');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -115,7 +122,7 @@ export function StoryTool() {
       }
 
       const classifyRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/classify_product`,
+        `${backendBase}/classify_product`,
         { method: 'POST', body: formData }
       );
       if (!classifyRes.ok) throw new Error('Classification failed');
@@ -126,7 +133,7 @@ export function StoryTool() {
 
       // ---------- STEP 3: Generate story ----------
       const storyRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/generate_product_story`,
+        `${backendBase}/generate_product_story`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -141,7 +148,7 @@ export function StoryTool() {
 
       // ---------- STEP 4: Estimate price ----------
       const priceRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/estimate_price`,
+        `${backendBase}/estimate_price`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -158,7 +165,7 @@ export function StoryTool() {
 
       // ---------- STEP 5: Save draft in Firestore ----------
       const saveRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/save_product_draft`,
+        `${backendBase}/save_product_draft`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -180,6 +187,37 @@ export function StoryTool() {
       if (!saveRes.ok) throw new Error('Saving draft failed');
       const saveData = await saveRes.json();
 
+      // ---------- STEP 6: Generate AR Model (if painting) ----------
+      let arModelUrl: string | undefined;
+      let arGenerationStatus: 'generating' | 'success' | 'failed' | 'not-applicable' = 'not-applicable';
+      
+      if (isPainting && saveData.id) {
+        try {
+          arGenerationStatus = 'generating';
+          console.log('🎯 Starting AR model generation for painting...');
+          
+          const arRes = await fetch(
+            `${backendBase}/generate_ar_model/${saveData.id}`,
+            { method: 'POST' }
+          );
+          
+          const arData = await arRes.json();
+          console.log('🎨 AR generation response:', arData);
+          
+          if (arData.success && arData.ar_model_url) {
+            arModelUrl = arData.ar_model_url;
+            arGenerationStatus = 'success';
+            console.log('✅ AR model generated successfully:', arModelUrl);
+          } else {
+            arGenerationStatus = 'failed';
+            console.warn('⚠️ AR generation failed:', arData.message || 'Unknown error');
+          }
+        } catch (arError) {
+          arGenerationStatus = 'failed';
+          console.error('❌ AR generation error:', arError);
+        }
+      }
+
       // ---------- COMBINE RESULTS ----------
       setResult({
         isPainting,
@@ -190,12 +228,22 @@ export function StoryTool() {
         minPrice: priceData.minPrice,
         maxPrice: priceData.maxPrice,
         reasoning: priceData.reasoning,
+        arModelUrl,
+        arGenerationStatus,
       });
       setDraftId(saveData.id);
 
       toast({
         title: 'Draft saved successfully!',
-        description: `Draft ID: ${saveData.id}`,
+        description: `Draft ID: ${saveData.id}${
+          isPainting 
+            ? arGenerationStatus === 'success' 
+              ? ' • AR model generated!' 
+              : arGenerationStatus === 'failed'
+              ? ' • AR generation failed'
+              : ' • AR model generating...'
+            : ''
+        }`,
       });
     } catch (error) {
       toast({
@@ -315,7 +363,7 @@ export function StoryTool() {
                 ) : (
                   <Wand2 className="mr-2 h-4 w-4" />
                 )}
-                Generate Story + Classify + Estimate Price
+                Generate Story + Price + AR Model
               </Button>
             </form>
           </Form>
@@ -384,6 +432,53 @@ export function StoryTool() {
                 </>
               )}
 
+              {/* AR Model Section */}
+              {result.isPainting && (
+                <>
+                  <h4 className="text-lg font-semibold">AR Model Status:</h4>
+                  {result.arGenerationStatus === 'generating' && (
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span>Generating 3D AR model with Blender...</span>
+                    </div>
+                  )}
+                  {result.arGenerationStatus === 'success' && result.arModelUrl && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-green-600">
+                        <span>✅ AR model generated successfully!</span>
+                      </div>
+                      <div className="border rounded-lg p-4 bg-gray-50">
+                        <h5 className="font-medium mb-2">3D AR Preview:</h5>
+                        <model-viewer
+                          src={result.arModelUrl}
+                          ios-src={result.arModelUrl.replace(".glb", ".usdz")}
+                          alt="3D AR model of your product"
+                          ar
+                          ar-modes="scene-viewer quick-look webxr"
+                          auto-rotate
+                          camera-controls
+                          style={{ width: "100%", height: "300px" }}
+                          loading="eager"
+                        ></model-viewer>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Model URL: {result.arModelUrl}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {result.arGenerationStatus === 'failed' && (
+                    <div className="text-orange-600">
+                      ⚠️ AR model generation failed. You can try generating it manually later.
+                    </div>
+                  )}
+                  {result.arGenerationStatus === 'not-applicable' && (
+                    <div className="text-gray-500">
+                      AR generation is only available for paintings.
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* ✅ Next Button */}
               {draftId && (
                 <Button
@@ -392,7 +487,7 @@ export function StoryTool() {
                     window.location.href = `/product/${draftId}/ar`;
                   }}
                 >
-                  Next →
+                  {result.arGenerationStatus === 'success' ? 'View Full AR Experience' : 'Continue to Product Page'} →
                 </Button>
               )}
             </CardContent>

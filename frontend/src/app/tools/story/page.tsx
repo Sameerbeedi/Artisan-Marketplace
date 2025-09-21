@@ -1,4 +1,4 @@
-import { StoryTool } from '../../../components/tools/story-tool-frontend';
+import { StoryTool } from '../../../components/tools/story-tool';
 import { ArtistOnly } from '../../../components/auth/ArtistOnly';
 import { Sparkles } from 'lucide-react';
 
