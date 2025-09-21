@@ -399,7 +399,6 @@ export function StoryTool() {
                     className="max-w-xs rounded border"
                   />
                   <p className="text-xs break-all text-blue-600 underline">
-                    {result.imageUrl}
                   </p>
                 </>
               )}

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, Form, HTTPException, Request
+from fastapi import APIRouter, UploadFile, Form, HTTPException, Request, Body
 import httpx
 import google.generativeai as genai
 import base64
@@ -8,6 +8,7 @@ import os
 import requests
 import shutil
 from PIL import Image
+from firebase_config import db
 
 from data_types_class import (
     CatalogProductInput, CatalogProductOutput,
@@ -192,20 +193,37 @@ async def get_product(product_id: str):
 
 
 @router.post("/publish_product/{product_id}")
-async def publish_product(product_id: str):
+async def publish_product(product_id: str, body: dict = Body(...)):
+    user_price = body.get("price")
+    if not user_price or user_price <= 0:
+        raise HTTPException(status_code=400, detail="Invalid price")
+
     if not db:
-        # Firebase not available - return mock response
-        return {"id": product_id, "status": "published_without_firebase"}
-        
+        return {"id": product_id, "status": "published_without_firebase", "finalPrice": user_price}
+
     ref = db.collection("products").document(product_id)
-    if not ref.get().exists:
+    doc = ref.get()
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    data = doc.to_dict()
+    ai_price = data.get("price", {})
 
     ref.update({
         "status": "published",
-        "published_at": firestore.SERVER_TIMESTAMP
+        "finalPrice": user_price,  # 👈 user’s quoted price
+        "price": ai_price,        # 👈 keep AI’s range intact
+        "published_at": firestore.SERVER_TIMESTAMP,
     })
-    return {"id": product_id, "status": "published"}
+
+    updated_doc = ref.get().to_dict()
+    return {
+        "id": product_id,
+        "status": updated_doc.get("status"),
+        "finalPrice": updated_doc.get("finalPrice"),
+        "price": updated_doc.get("price"),
+        "published_at": updated_doc.get("published_at")
+    }
 
 
 # -----------------------------------
@@ -444,3 +462,38 @@ async def personalized_recommendation(req: RecommendationRequest):
         "categories": list({p["category"] for p in recommended_products}),
         "suggestedFilters": {}
     }
+
+products_store = {}  # fallback in-memory store
+
+@router.get("/products")
+async def get_products():
+    if not db:
+        return list(products_store.values())
+
+    products_ref = db.collection("products").where("status", "==", "published")
+    docs = products_ref.stream()
+
+    products = []
+    for doc in docs:
+        data = doc.to_dict()
+
+        # Handle price flexibly
+        price = None
+        if "finalPrice" in data:
+            price = data["finalPrice"]
+        elif isinstance(data.get("price"), dict):
+            price = data["price"].get("min")
+        elif isinstance(data.get("price"), (int, float)):
+            price = data["price"]
+
+        products.append({
+            "id": doc.id,
+            "name": data.get("title"),
+            "price": price,
+            "category": data.get("category"),
+            "artisan": data.get("artisan", "Unknown"),
+            "image": data.get("image_url", "/images/placeholder.png"),
+            "description": data.get("description") or data.get("story", ""),
+        })
+
+    return products

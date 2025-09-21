@@ -239,6 +239,16 @@ export default function HomePage() {
                   </Link>
                 </Button>
               </motion.div>
+
+              {/* 👇 NEW Cart Button */}
+              <motion.div {...scaleOnHover}>
+                <Button asChild size="lg" variant="secondary" className="text-lg px-8 bg-orange-500 text-white hover:bg-orange-600 hover:shadow-lg transition-all duration-300">
+                  <Link href="/cart">
+                    Go to Cart 🛒
+                  </Link>
+                </Button>
+              </motion.div>
+
               <motion.div {...scaleOnHover}>
                 <Button asChild size="lg" variant="secondary" className="text-lg px-8 bg-white text-primary hover:bg-gray-100 hover:shadow-lg transition-all duration-300">
                   <Link href="/signup">

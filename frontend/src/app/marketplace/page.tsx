@@ -26,34 +26,92 @@ export default function MarketplacePage() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   
   // Use local products from data.ts
+  // ✅ Extracted fetchProducts so we can call it anytime
+  const fetchProducts = async () => {
+    try {
+      // Local demo products
+      const validLocalProducts = products.filter(product =>
+        product &&
+        product.id &&
+        product.name &&
+        product.price !== undefined &&
+        product.category &&
+        product.artisan
+      );
+
+      console.log('📦 Local hardcoded products:', validLocalProducts.length);
+
+      // Fetch published products from backend
+      const res = await fetch('http://localhost:9079/products'); // update backend URL if needed
+      const publishedProducts = await res.json();
+
+      console.log('✅ Published products fetched:', publishedProducts.length);
+
+      // Merge both
+      const mergedProducts = [
+        ...validLocalProducts,
+        ...publishedProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          category: p.category,
+          artisan: p.artisan,
+          imageUrl: p.image|| p.image_url || '/images/placeholder.png',
+        })),
+      ];
+
+      console.log('🎉 Total products (local + published):', mergedProducts.length);
+
+      setOriginalProducts(mergedProducts);
+      setFilteredProducts(mergedProducts);
+    } catch (error) {
+      console.error('❌ Failed to fetch published products:', error);
+
+      // fallback → just local products
+      const validLocalProducts = products.filter(product =>
+        product &&
+        product.id &&
+        product.name &&
+        product.price !== undefined &&
+        product.category &&
+        product.artisan
+      );
+
+      setOriginalProducts(validLocalProducts);
+      setFilteredProducts(validLocalProducts);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+// ✅ Initial load
   useEffect(() => {
-    // Filter out any products with missing required fields
-    const validProducts = products.filter(product => 
-      product && 
-      product.id && 
-      product.name && 
-      product.price !== undefined &&
-      product.category &&
-      product.artisan
-    );
-    
-    console.log('🚀 Products loading useEffect triggered');
-    console.log('📦 Raw products imported:', products.length);
-    console.log('✅ Valid products after filtering:', validProducts.length);
-    console.log('🔍 First valid product:', validProducts[0]);
-    console.log('💾 Setting originalProducts and filteredProducts');
-    
-    setOriginalProducts(validProducts);
-    setFilteredProducts(validProducts);
-    setLoadingProducts(false);
-    // Initial filter to ensure products show up
-    setTimeout(() => {
-      if (validProducts.length > 0) {
-        console.log('⏰ Timeout: Re-setting filtered products to:', validProducts.length);
-        setFilteredProducts(validProducts);
-      }
-    }, 0);
+    fetchProducts();
   }, []);
+
+  // ✅ Expose refresh function
+  const refreshProducts = async () => {
+    setLoadingProducts(true);
+    await fetchProducts();
+  };
+
+  // Call backend to publish a product, then refresh the list
+  const publishProduct = async (productId: string) => {
+    try {
+      const res = await fetch(`http://localhost:9079/publish_product/${productId}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to publish product");
+
+      const data = await res.json();
+      console.log("✅ Product published:", data);
+
+      // Refresh Marketplace immediately
+      await refreshProducts();
+    } catch (error) {
+      console.error("❌ Error publishing product:", error);
+    }
+  };
   
   const [isAISearch, setIsAISearch] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -392,7 +450,7 @@ export default function MarketplacePage() {
               id: product.id.toString(),
               name: product.name,
               price: product.price,
-              imageUrl: product.image,
+              imageUrl: product.imageUrl,
               artisan: product.artisan,
               category: product.category,
               aiHint: '',
