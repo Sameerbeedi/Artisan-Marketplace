@@ -27,90 +27,125 @@ img = bpy.data.images.load(image_path)
 width, height = img.size
 aspect_ratio = width / height
 
-# Normalize → longer side = 1
+# Frame dimensions (normalize to reasonable size)
 if aspect_ratio >= 1:
-    plane_width = 1.0
-    plane_height = 1.0 / aspect_ratio
+    frame_width = 1.0
+    frame_height = 1.0 / aspect_ratio
 else:
-    plane_width = aspect_ratio
-    plane_height = 1.0
+    frame_width = aspect_ratio
+    frame_height = 1.0
+
+frame_depth = 0.05  # Depth of the frame (thickness)
 
 # ----------------------------
-# Create plane (canvas)
+# Create 3D Picture Frame
 # ----------------------------
-bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
-canvas = bpy.context.active_object
-canvas.name = "Canvas"
 
-# Scale plane
-canvas.scale[0] = plane_width
-canvas.scale[1] = plane_height
+# 1. Create the main frame (outer rectangle)
+bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 0))
+frame = bpy.context.active_object
+frame.name = "PictureFrame"
+
+# Scale to frame dimensions
+frame.scale[0] = frame_width
+frame.scale[1] = frame_height  
+frame.scale[2] = frame_depth
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+# 2. Create the inner picture area (slightly smaller)
+bpy.ops.mesh.primitive_cube_add(size=2, location=(0, 0, 0.01))
+inner_frame = bpy.context.active_object
+inner_frame.name = "PictureArea"
+
+# Scale inner area (90% of frame size)
+inner_frame.scale[0] = frame_width * 0.9
+inner_frame.scale[1] = frame_height * 0.9
+inner_frame.scale[2] = frame_depth * 0.8
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # ----------------------------
-# Give thickness (extrude along Z)
+# Fix UV mapping for the picture frame
 # ----------------------------
-bpy.ops.object.mode_set(mode="EDIT")
-bpy.ops.mesh.select_all(action="SELECT")  # ✅ ensure all faces are selected
-bpy.ops.mesh.extrude_region_move(
-    TRANSFORM_OT_translate={"value": (0, 0, 0.02)}
-)
-bpy.ops.mesh.normals_make_consistent(inside=False)
-bpy.ops.object.mode_set(mode="OBJECT")
+# Select the inner frame (picture area) and unwrap it properly
+bpy.context.view_layer.objects.active = inner_frame
+bpy.ops.object.select_all(action='DESELECT')
+inner_frame.select_set(True)
+bpy.ops.object.mode_set(mode='EDIT')
+bpy.ops.mesh.select_all(action='SELECT')
+
+# Use simple cube projection which works reliably
+bpy.ops.uv.cube_project()
+
+bpy.ops.object.mode_set(mode='OBJECT')
 
 # ----------------------------
-# Create materials
+# Create Materials
 # ----------------------------
-# Painting (front)
-painting_mat = bpy.data.materials.new(name="PaintingMaterial")
-painting_mat.use_nodes = True
-nodes = painting_mat.node_tree.nodes
-links = painting_mat.node_tree.links
 
-# Clear default nodes to build a consistent emissive material
+# Frame material (wood-like)
+frame_mat = bpy.data.materials.new(name="FrameMaterial")
+frame_mat.use_nodes = True
+frame_bsdf = frame_mat.node_tree.nodes.get("Principled BSDF")
+frame_bsdf.inputs["Base Color"].default_value = (0.4, 0.25, 0.1, 1)  # Brown wood
+frame_bsdf.inputs["Roughness"].default_value = 0.7
+frame_bsdf.inputs["Metallic"].default_value = 0.1
+
+# Picture material (with the uploaded image)
+picture_mat = bpy.data.materials.new(name="PictureMaterial")
+picture_mat.use_nodes = True
+nodes = picture_mat.node_tree.nodes
+links = picture_mat.node_tree.links
+
+# Clear default nodes
 for n in nodes:
     nodes.remove(n)
 
+# Create emission shader for the picture (so it glows slightly)
 output_node = nodes.new("ShaderNodeOutputMaterial")
 emission_node = nodes.new("ShaderNodeEmission")
 tex_image = nodes.new("ShaderNodeTexImage")
+tex_coord = nodes.new("ShaderNodeTexCoord")
+mapping = nodes.new("ShaderNodeMapping")
+
+# Load the image
 tex_image.image = img
+tex_image.interpolation = 'Linear'
 
-# Slight emission strength for visibility
-emission_node.inputs[1].default_value = 1.0
-links.new(emission_node.inputs[0], tex_image.outputs["Color"])  # Color -> Emission
-links.new(output_node.inputs[0], emission_node.outputs["Emission"])  # Emission -> Surface
+# Set up proper texture coordinates to avoid cropping
+# Connect: UV Coordinates → Mapping → Image Texture → Emission → Output
+links.new(mapping.inputs["Vector"], tex_coord.outputs["UV"])
+links.new(tex_image.inputs["Vector"], mapping.outputs["Vector"])
+links.new(emission_node.inputs["Color"], tex_image.outputs["Color"])
+links.new(output_node.inputs["Surface"], emission_node.outputs["Emission"])
 
-# Wood (back + sides)
-wood_mat = bpy.data.materials.new(name="WoodMaterial")
-wood_mat.use_nodes = True
-bsdf_wood = wood_mat.node_tree.nodes.get("Principled BSDF")
-bsdf_wood.inputs["Base Color"].default_value = (0.4, 0.25, 0.1, 1)  # brown
-bsdf_wood.inputs["Roughness"].default_value = 0.8
-
-# Assign both materials
-canvas.data.materials.append(painting_mat)  # index 0
-canvas.data.materials.append(wood_mat)      # index 1
+# Set emission strength for visibility
+emission_node.inputs["Strength"].default_value = 1.2
 
 # ----------------------------
-# Assign materials by face normal
+# Assign Materials
 # ----------------------------
-mesh = canvas.data
-for poly in mesh.polygons:
-    if poly.normal.z > 0:  # front face
-        poly.material_index = 0
-    else:                  # back + sides
-        poly.material_index = 1
+frame.data.materials.append(frame_mat)
+inner_frame.data.materials.append(picture_mat)
+
+# ----------------------------
+# Position for Wall Hanging
+# ----------------------------
+# Rotate the entire frame to face forward (like hanging on wall)
+frame.rotation_euler = (1.5708, 0, 0)  # 90 degrees around X-axis
+inner_frame.rotation_euler = (1.5708, 0, 0)  # Same rotation
+
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # ----------------------------
 # Export GLB
 # ----------------------------
-# ✅ make sure object is selected before export
+# Select both objects for export
 bpy.ops.object.select_all(action="DESELECT")
-canvas.select_set(True)
-bpy.context.view_layer.objects.active = canvas
+frame.select_set(True)
+inner_frame.select_set(True)
+bpy.context.view_layer.objects.active = frame
 
-# Basic world light to avoid complete darkness in some viewers
+# Add world lighting
 world = bpy.context.scene.world or bpy.data.worlds.new("World")
 world.use_nodes = True
 world.node_tree.nodes["Background"].inputs[1].default_value = 1.0
@@ -122,6 +157,7 @@ bpy.ops.export_scene.gltf(
     use_selection=True,
     export_texcoords=True,
     export_normals=True,
+    export_materials='EXPORT'
 )
 
-print(f"✅ Exported GLB with painting front & wood back: {output_path}")
+print(f"✅ Exported 3D Picture Frame GLB: {output_path}")
