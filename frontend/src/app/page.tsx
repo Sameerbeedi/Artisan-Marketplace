@@ -104,7 +104,7 @@ export default function HomePage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white hover:text-primary">
+              <Button asChild size="lg" variant="secondary" className="text-lg px-8 bg-white text-primary hover:bg-gray-100">
                 <Link href="/signup">
                   Join as Artisan
                 </Link>
