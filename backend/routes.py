@@ -386,10 +386,15 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
             # Generate URL based on environment
             host = request.headers.get("host", "localhost:9079")
             
-            # For production deployment, use environment variable for backend URL
-            backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+            # Force HTTPS for production deployments (Render.com, Railway, etc.)
+            if "onrender.com" in host or "railway.app" in host or "herokuapp.com" in host:
+                backend_url = f"https://{host}"
+            else:
+                backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+                
             glb_url = f"{backend_url}/ar_models/{product_id}.glb"
             print(f"⚠️ Firebase Storage not available. GLB saved locally: {static_glb_path}")
+            print(f"🔗 Generated GLB URL: {glb_url}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File storage failed: {str(e)}")
 
