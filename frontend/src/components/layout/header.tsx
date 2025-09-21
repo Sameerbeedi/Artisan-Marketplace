@@ -23,7 +23,6 @@ import { useTranslation } from '@/contexts/LanguageContext';
 const navLinks = [
   { href: '/marketplace', label: 'nav.marketplace', requiresAuth: false },
   { href: '/tools', label: 'nav.tools', requiresAuth: true, artistOnly: true },
-  { href: '/#features', label: 'nav.features', requiresAuth: false },
 ];
 
 export function Header() {
