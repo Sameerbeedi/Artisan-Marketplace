@@ -44,14 +44,10 @@ bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
 picture = bpy.context.active_object
 picture.name = "FramedPicture"
 
-# Rotate to correct orientation for AR wall placement (90 degrees around X axis)
-picture.rotation_euler[0] = 1.5708  # 90 degrees in radians
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
-
 # Scale to proper dimensions
 picture.scale[0] = plane_width
 picture.scale[1] = plane_height
-bpy.ops.object.transform_apply(location=True, rotation=False, scale=True)
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 # Add thickness by extruding
 bpy.ops.object.mode_set(mode='EDIT')
@@ -61,9 +57,8 @@ bpy.ops.mesh.extrude_region_move(
 )
 bpy.ops.mesh.normals_make_consistent(inside=False)
 
-# Better UV mapping - create clean UVs for the entire mesh
-bpy.ops.uv.reset()  # Reset UV coordinates
-bpy.ops.uv.unwrap(method='CONFORMAL', margin=0.001)
+# Simple UV unwrap
+bpy.ops.uv.unwrap(method='ANGLE_BASED', margin=0.001)
 bpy.ops.object.mode_set(mode='OBJECT')
 
 # ----------------------------
