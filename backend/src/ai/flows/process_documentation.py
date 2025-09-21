@@ -7,7 +7,10 @@ A flow to generate step-by-step craft process descriptions with cultural context
 - GenerateProcessDocumentationOutput: Output type.
 """
 
-from backend.data_types_class import GenerateProcessDocumentationInput, GenerateProcessDocumentationOutput
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+from data_types_class import GenerateProcessDocumentationInput, GenerateProcessDocumentationOutput
 
 # Mock AI function (replace with real AI integration)
 async def ai_generate_process_doc(
