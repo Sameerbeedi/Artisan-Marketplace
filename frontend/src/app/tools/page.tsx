@@ -21,30 +21,35 @@ const tools = [
     description: 'Categorize your craft using image recognition.',
     href: '/tools/catalog',
     icon: ScanSearch,
+    comingSoon: true,
   },
   {
     title: 'Technique Identification',
     description: 'Identify traditional techniques from photos.',
     href: '/tools/technique',
     icon: Palette,
+    comingSoon: true,
   },
   {
     title: 'Photo Quality Assessment',
     description: 'Get feedback to improve your product photos.',
     href: '/tools/quality',
     icon: CheckCircle,
+    comingSoon: true,
   },
   {
     title: 'Heritage Storytelling',
     description: 'Craft a compelling narrative for your brand.',
     href: '/tools/story',
     icon: Sparkles,
+    comingSoon: false,
   },
   {
     title: 'Process Documentation',
     description: 'Generate step-by-step guides for your craft.',
     href: '/tools/process',
     icon: BookText,
+    comingSoon: true,
   },
 ];
 
@@ -64,23 +69,45 @@ export default function ToolsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {tools.map((tool) => (
-            <Link href={tool.href} key={tool.href} className="group">
-              <Card className="h-full flex flex-col justify-between hover:border-primary transition-colors duration-300 transform hover:-translate-y-1 hover:shadow-xl">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <tool.icon className="h-10 w-10 mb-4 text-primary" />
+            <div key={tool.href} className="group">
+              {tool.comingSoon ? (
+                <Card className="h-full flex flex-col justify-between opacity-60 cursor-not-allowed">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <tool.icon className="h-10 w-10 mb-4 text-muted-foreground" />
+                      <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <CardTitle className="font-headline text-2xl text-muted-foreground">
+                      {tool.title}
+                    </CardTitle>
+                    <CardDescription className="text-muted-foreground/70">{tool.description}</CardDescription>
+                  </CardHeader>
+                  <div className="p-6 pt-0 text-muted-foreground font-semibold flex items-center gap-2">
+                    Coming Soon
                   </div>
-                  <CardTitle className="font-headline text-2xl">
-                    {tool.title}
-                  </CardTitle>
-                  <CardDescription>{tool.description}</CardDescription>
-                </CardHeader>
-                <div className="p-6 pt-0 text-primary font-semibold flex items-center gap-2">
-                  Use Tool
-                  <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Card>
-            </Link>
+                </Card>
+              ) : (
+                <Link href={tool.href} className="group">
+                  <Card className="h-full flex flex-col justify-between hover:border-primary transition-colors duration-300 transform hover:-translate-y-1 hover:shadow-xl">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <tool.icon className="h-10 w-10 mb-4 text-primary" />
+                      </div>
+                      <CardTitle className="font-headline text-2xl">
+                        {tool.title}
+                      </CardTitle>
+                      <CardDescription>{tool.description}</CardDescription>
+                    </CardHeader>
+                    <div className="p-6 pt-0 text-primary font-semibold flex items-center gap-2">
+                      Use Tool
+                      <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </Card>
+                </Link>
+              )}
+            </div>
           ))}
         </div>
       </div>
