@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     libxinerama1 \
     libxcursor1 \
     libasound2 \
+    libxkbcommon0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install Blender 4.0 (headless compatible version)
