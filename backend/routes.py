@@ -32,6 +32,51 @@ from src.lib.data import Products as products
 # In-memory store for when Firebase is not available
 products_store = {}
 
+# Initialize mock products for testing
+def initialize_mock_products():
+    """Initialize mock products for testing AR functionality"""
+    mock_products = {
+        "mock_draft_1": {
+            "id": "mock_draft_1",
+            "title": "Traditional Ceramic Vase",
+            "category": "pottery",
+            "isPainting": False,
+            "story": "A beautiful handcrafted ceramic vase made using traditional techniques passed down through generations.",
+            "image_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_1.glb",
+            "ar_model_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_1.glb",
+            "status": "published",
+            "price": {"min": 150, "max": 250},
+            "finalPrice": 200,
+            "technique": "Traditional pottery wheel",
+            "materials": "Clay, ceramic glaze",
+            "dimensions": "Height: 25cm, Width: 15cm"
+        },
+        "mock_draft_2": {
+            "id": "mock_draft_2", 
+            "title": "Decorative Ceramic Bowl",
+            "category": "pottery",
+            "isPainting": False,
+            "story": "An elegant ceramic bowl featuring intricate hand-painted patterns.",
+            "image_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_2.glb",
+            "ar_model_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_2.glb",
+            "status": "published",
+            "price": {"min": 80, "max": 120},
+            "finalPrice": 100,
+            "technique": "Hand-painted ceramics",
+            "materials": "Clay, ceramic paints",
+            "dimensions": "Diameter: 20cm, Height: 8cm"
+        }
+    }
+    
+    for product_id, product_data in mock_products.items():
+        if product_id not in products_store:
+            products_store[product_id] = product_data
+    
+    print(f"🔥 Initialized {len(mock_products)} mock products")
+
+# Initialize mock products on startup
+initialize_mock_products()
+
 # 🔹 Firebase
 from firebase_config import db, bucket
 from firebase_admin import storage, firestore

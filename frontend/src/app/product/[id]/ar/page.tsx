@@ -24,7 +24,7 @@ export default function ProductARPage() {
   const [priceError, setPriceError] = useState<string | null>(null); // ✅ inline error
 
 
-  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-production.up.railway.app';
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-pvy1.onrender.com';
 
   useEffect(() => {
     async function fetchProduct() {
