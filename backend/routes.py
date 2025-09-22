@@ -90,6 +90,15 @@ router = APIRouter()
 async def health():
     return {"status": "ok"}
 
+@router.get("/debug/products")
+async def debug_products():
+    """Debug endpoint to check loaded products"""
+    return {
+        "products_count": len(products_store),
+        "product_ids": list(products_store.keys()),
+        "mock_draft_1_exists": "mock_draft_1" in products_store
+    }
+
 
 # -----------------------------------
 # AI Flows
