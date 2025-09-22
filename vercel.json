@@ -1,11 +1,18 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "frontend/package.json",
-      "use": "@vercel/next"
+      "use": "@vercel/next@latest",
+      "config": {
+        "zeroConfig": true
+      }
     }
   ],
   "routes": [
+    {
+      "handle": "filesystem"
+    },
     {
       "src": "/(.*)",
       "dest": "/frontend/$1"
