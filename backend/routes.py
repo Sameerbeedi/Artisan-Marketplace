@@ -96,7 +96,18 @@ async def debug_products():
     return {
         "products_count": len(products_store),
         "product_ids": list(products_store.keys()),
-        "mock_draft_1_exists": "mock_draft_1" in products_store
+        "mock_draft_1_exists": "mock_draft_1" in products_store,
+        "products_store_content": products_store
+    }
+
+@router.post("/debug/init-products")
+async def force_init_products():
+    """Force initialize mock products"""
+    initialize_mock_products()
+    return {
+        "message": "Products initialized",
+        "products_count": len(products_store),
+        "product_ids": list(products_store.keys())
     }
 
 
