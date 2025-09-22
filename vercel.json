@@ -2,21 +2,10 @@
   "builds": [
     {
       "src": "frontend/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
+      "use": "@vercel/next"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/frontend/api/$1"
-    },
-    {
-      "src": "/_next/(.*)",
-      "dest": "/frontend/_next/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "/frontend/$1"
