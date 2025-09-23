@@ -36,7 +36,7 @@ export default function RootLayout({
         {/* Load Google <model-viewer> script globally */}
         <Script
           type="module"
-          src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
+          src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"
           strategy="beforeInteractive"
         />
       </head>

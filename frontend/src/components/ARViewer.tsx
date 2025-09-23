@@ -1,24 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
-
-// Dynamically import Three.js AR viewer to avoid SSR issues
-const ThreeJsARViewer = dynamic(() => import("./ThreeJsARViewer"), {
-  ssr: false,
-  loading: () => (
-    <div style={{
-      width: "100%",
-      height: "600px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#f5f5f5"
-    }}>
-      <div>Loading AR Viewer...</div>
-    </div>
-  )
-});
 
 export default function ARViewer({
   modelUrl,
@@ -30,24 +12,12 @@ export default function ARViewer({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detect mobile device and iOS
-    const userAgent = navigator.userAgent;
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-    const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    setIsMobile(isMobileDevice);
-    setIsIOS(isIOSDevice);
+    // Detect mobile device
+    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
   }, []);
 
-  // Use Three.js AR for iOS, model-viewer for Android
-  if (isIOS) {
-    return <ThreeJsARViewer modelUrl={modelUrl} altText={altText} />;
-  }
-
-  // Android and desktop: use model-viewer
   const handleLoad = () => {
     setIsLoading(false);
     setHasError(false);
@@ -84,7 +54,15 @@ export default function ARViewer({
         }}>
           <div>Unable to load 3D model</div>
           <div style={{ fontSize: "14px", marginTop: "8px" }}>
-            {isMobile ? "Try opening in desktop browser" : "Check your internet connection"}
+            {isMobile ? (
+              <>
+                Make sure you're using Safari (iOS) or Chrome (Android) and have AR enabled.
+                <br />
+                For iOS: Ensure you're on iOS 12+ and using Safari.
+                <br />
+                For Android: Ensure Google Play Services for AR is installed.
+              </>
+            ) : "Check your internet connection"}
           </div>
         </div>
       )}
@@ -93,7 +71,7 @@ export default function ARViewer({
         src={modelUrl}
         alt={altText}
         ar={isMobile}
-        ar-modes="scene-viewer quick-look"
+        ar-modes="scene-viewer quick-look webxr"
         ar-scale="fixed"
         ar-placement="wall"
         camera-controls
