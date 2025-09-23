@@ -35,6 +35,9 @@ products_store = {}
 # Initialize mock products for testing
 def initialize_mock_products():
     """Initialize mock products for testing AR functionality"""
+    # Get backend URL dynamically for local development
+    host = os.getenv("BACKEND_URL", "http://localhost:9079")
+    
     mock_products = {
         "mock_draft_1": {
             "id": "mock_draft_1",
@@ -42,8 +45,8 @@ def initialize_mock_products():
             "category": "pottery",
             "isPainting": False,
             "story": "A beautiful handcrafted ceramic vase made using traditional techniques passed down through generations.",
-            "image_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_1.glb",
-            "ar_model_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_1.glb",
+            "image_url": f"{host}/ar_models/mock_draft_1.glb",
+            "ar_model_url": f"{host}/ar_models/mock_draft_1.glb",
             "status": "published",
             "price": {"min": 150, "max": 250},
             "finalPrice": 200,
@@ -57,8 +60,8 @@ def initialize_mock_products():
             "category": "pottery",
             "isPainting": False,
             "story": "An elegant ceramic bowl featuring intricate hand-painted patterns.",
-            "image_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_2.glb",
-            "ar_model_url": "https://artisan-marketplace-pvy1.onrender.com/ar_models/mock_draft_2.glb",
+            "image_url": f"{host}/ar_models/mock_draft_2.glb",
+            "ar_model_url": f"{host}/ar_models/mock_draft_2.glb",
             "status": "published",
             "price": {"min": 80, "max": 120},
             "finalPrice": 100,
