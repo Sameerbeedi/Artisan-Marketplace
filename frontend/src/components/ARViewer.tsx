@@ -1,6 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+// Dynamically import Three.js AR viewer to avoid SSR issues
+const ThreeJsARViewer = dynamic(() => import("./ThreeJsARViewer"), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      width: "100%",
+      height: "600px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#f5f5f5"
+    }}>
+      <div>Loading AR Viewer...</div>
+    </div>
+  )
+});
 
 export default function ARViewer({
   modelUrl,
@@ -12,12 +30,24 @@ export default function ARViewer({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detect mobile device
-    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    // Detect mobile device and iOS
+    const userAgent = navigator.userAgent;
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    setIsMobile(isMobileDevice);
+    setIsIOS(isIOSDevice);
   }, []);
 
+  // Use Three.js AR for iOS, model-viewer for Android
+  if (isIOS) {
+    return <ThreeJsARViewer modelUrl={modelUrl} altText={altText} />;
+  }
+
+  // Android and desktop: use model-viewer
   const handleLoad = () => {
     setIsLoading(false);
     setHasError(false);
@@ -42,7 +72,7 @@ export default function ARViewer({
           <div>Loading 3D Model...</div>
         </div>
       )}
-      
+
       {hasError && (
         <div style={{
           position: "absolute",
@@ -69,8 +99,8 @@ export default function ARViewer({
         camera-controls
         auto-rotate={!isMobile}
         rotation-per-second="30deg"
-        style={{ 
-          width: "100%", 
+        style={{
+          width: "100%",
           height: "600px",
           backgroundColor: isMobile ? "#000" : "#f0f0f0"
         }}
@@ -94,7 +124,7 @@ export default function ARViewer({
         }}>
           📱 View Picture Frame in AR
         </button>
-        
+
         {/* Loading indicator inside model-viewer */}
         <div slot="progress-bar" style={{
           position: "absolute",
