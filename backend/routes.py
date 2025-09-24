@@ -32,6 +32,54 @@ from src.lib.data import Products as products
 # In-memory store for when Firebase is not available
 products_store = {}
 
+# Initialize mock products for testing
+def initialize_mock_products():
+    """Initialize mock products for testing AR functionality"""
+    # Get backend URL dynamically for local development
+    host = os.getenv("BACKEND_URL", "http://localhost:9079")
+    
+    mock_products = {
+        "mock_draft_1": {
+            "id": "mock_draft_1",
+            "title": "Traditional Ceramic Vase",
+            "category": "pottery",
+            "isPainting": False,
+            "story": "A beautiful handcrafted ceramic vase made using traditional techniques passed down through generations.",
+            "image_url": f"{host}/ar_models/mock_draft_1.glb",
+            "ar_model_url": f"{host}/ar_models/mock_draft_1.glb",
+            "status": "published",
+            "price": {"min": 150, "max": 250},
+            "finalPrice": 200,
+            "technique": "Traditional pottery wheel",
+            "materials": "Clay, ceramic glaze",
+            "dimensions": "Height: 25cm, Width: 15cm"
+        },
+        "mock_draft_2": {
+            "id": "mock_draft_2", 
+            "title": "Decorative Ceramic Bowl",
+            "category": "pottery",
+            "isPainting": False,
+            "story": "An elegant ceramic bowl featuring intricate hand-painted patterns.",
+            "image_url": f"{host}/ar_models/mock_draft_2.glb",
+            "ar_model_url": f"{host}/ar_models/mock_draft_2.glb",
+            "status": "published",
+            "price": {"min": 80, "max": 120},
+            "finalPrice": 100,
+            "technique": "Hand-painted ceramics",
+            "materials": "Clay, ceramic paints",
+            "dimensions": "Diameter: 20cm, Height: 8cm"
+        }
+    }
+    
+    for product_id, product_data in mock_products.items():
+        if product_id not in products_store:
+            products_store[product_id] = product_data
+    
+    print(f"🔥 Initialized {len(mock_products)} mock products")
+
+# Initialize mock products on startup
+initialize_mock_products()
+
 # 🔹 Firebase
 from firebase_config import db, bucket
 from firebase_admin import storage, firestore
@@ -44,6 +92,26 @@ router = APIRouter()
 @router.get("/health")
 async def health():
     return {"status": "ok"}
+
+@router.get("/debug/products")
+async def debug_products():
+    """Debug endpoint to check loaded products"""
+    return {
+        "products_count": len(products_store),
+        "product_ids": list(products_store.keys()),
+        "mock_draft_1_exists": "mock_draft_1" in products_store,
+        "products_store_content": products_store
+    }
+
+@router.post("/debug/init-products")
+async def force_init_products():
+    """Force initialize mock products"""
+    initialize_mock_products()
+    return {
+        "message": "Products initialized",
+        "products_count": len(products_store),
+        "product_ids": list(products_store.keys())
+    }
 
 
 # -----------------------------------
@@ -326,8 +394,16 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
             raise HTTPException(status_code=500, detail="Blender not found. Install Blender 4.x or add it to PATH")
     elif system == "Darwin":  # macOS
         blender_exe = "/Applications/Blender.app/Contents/MacOS/Blender"
-    else:  # Linux
-        blender_exe = "blender"
+    else:  # Linux (including Docker containers)
+        # Check common Docker/Linux paths first
+        possible_linux_paths = [
+            "/usr/local/bin/blender",  # Docker symlink location
+            "/opt/blender/blender",    # Docker installation location
+            "blender"                  # System PATH
+        ]
+        blender_exe = next((p for p in possible_linux_paths if os.path.exists(p) or shutil.which(p)), None)
+        if not blender_exe:
+            blender_exe = "blender"  # Fallback to PATH
     
     # Use absolute path to the Blender script to avoid CWD issues
     script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "blender_scripts", "generate_canvas_glb.py"))
@@ -378,10 +454,15 @@ async def generate_with_blender(product_id: str, image_url: str, product_data: d
             # Generate URL based on environment
             host = request.headers.get("host", "localhost:9079")
             
-            # For production deployment, use environment variable for backend URL
-            backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+            # Force HTTPS for production deployments (Render.com, Railway, etc.)
+            if "onrender.com" in host or "railway.app" in host or "herokuapp.com" in host:
+                backend_url = f"https://{host}"
+            else:
+                backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+                
             glb_url = f"{backend_url}/ar_models/{product_id}.glb"
             print(f"⚠️ Firebase Storage not available. GLB saved locally: {static_glb_path}")
+            print(f"🔗 Generated GLB URL: {glb_url}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"File storage failed: {str(e)}")
 

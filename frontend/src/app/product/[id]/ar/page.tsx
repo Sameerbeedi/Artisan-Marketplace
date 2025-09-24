@@ -24,25 +24,63 @@ export default function ProductARPage() {
   const [priceError, setPriceError] = useState<string | null>(null); // ✅ inline error
 
 
-  const backendBase = typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:9079`
-    : (process.env.NEXT_PUBLIC_BACKEND_URL || '');
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-pvy1.onrender.com';
 
   useEffect(() => {
     async function fetchProduct() {
       try {
         const res = await fetch(`${backendBase}/get_product/${productId}`);
-        const data = await res.json();
-        setProduct(data);
-        setArUrl(data.ar_model_url || null);
+        if (res.ok) {
+          const data = await res.json();
+          setProduct(data);
+          setArUrl(data.ar_model_url || null);
+        } else {
+          // Fallback to local mock data if backend is not ready
+          console.log("Backend not ready, using fallback mock data");
+          const mockProduct = {
+            id: productId,
+            title: "Traditional Ceramic Vase",
+            category: "pottery",
+            isPainting: false,
+            story: "A beautiful handcrafted ceramic vase made using traditional techniques passed down through generations.",
+            image_url: `${backendBase}/ar_models/${productId}.glb`,
+            ar_model_url: `${backendBase}/ar_models/${productId}.glb`,
+            status: "published",
+            price: { min: 150, max: 250 },
+            finalPrice: 200,
+            technique: "Traditional pottery wheel",
+            materials: "Clay, ceramic glaze",
+            dimensions: "Height: 25cm, Width: 15cm"
+          };
+          setProduct(mockProduct);
+          setArUrl(mockProduct.ar_model_url);
+        }
       } catch (err) {
         console.error("❌ Failed to fetch product:", err);
+        // Fallback to local mock data on error
+        const mockProduct = {
+          id: productId,
+          title: "Traditional Ceramic Vase",
+          category: "pottery",
+          isPainting: false,
+          story: "A beautiful handcrafted ceramic vase made using traditional techniques passed down through generations.",
+          image_url: `${backendBase}/ar_models/${productId}.glb`,
+          ar_model_url: `${backendBase}/ar_models/${productId}.glb`,
+          status: "published",
+          price: { min: 150, max: 250 },
+          finalPrice: 200,
+          technique: "Traditional pottery wheel",
+          materials: "Clay, ceramic glaze",
+          dimensions: "Height: 25cm, Width: 15cm"
+        };
+        setProduct(mockProduct);
+        setArUrl(mockProduct.ar_model_url);
       } finally {
         setLoading(false);
       }
     }
     fetchProduct();
-  }, [productId]);
+  }, [productId, backendBase]);
 
   async function generateAR() {
     setGeneratingAR(true);

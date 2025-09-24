@@ -42,7 +42,8 @@ export default function MarketplacePage() {
       console.log('📦 Local hardcoded products:', validLocalProducts.length);
 
       // Fetch published products from backend
-      const res = await fetch('http://localhost:9079/products'); // update backend URL if needed
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-production.up.railway.app';
+      const res = await fetch(`${backendUrl}/products`);
       const publishedProducts = await res.json();
 
       console.log('✅ Published products fetched:', publishedProducts.length);
@@ -98,7 +99,8 @@ export default function MarketplacePage() {
   // Call backend to publish a product, then refresh the list
   const publishProduct = async (productId: string) => {
     try {
-      const res = await fetch(`http://localhost:9079/publish_product/${productId}`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://artisan-marketplace-production.up.railway.app';
+      const res = await fetch(`${backendUrl}/publish_product/${productId}`, {
         method: "POST",
       });
       if (!res.ok) throw new Error("Failed to publish product");

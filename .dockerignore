@@ -1,0 +1,31 @@
+# Ignore frontend files
+frontend/
+docs/
+venv2/
+
+# Ignore git and IDE files
+.git
+.gitignore
+.env*
+.vscode/
+.idea/
+
+# Ignore temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+.pytest_cache/
+.cache
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore other deployment configs
+railway.toml
+vercel.json
+Procfile

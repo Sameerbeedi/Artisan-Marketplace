@@ -48,9 +48,26 @@ app.include_router(api_router)
 
 # Static file serving for AR models when Firebase is not available
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 ar_models_dir = os.path.join(os.path.dirname(__file__), "ar_models")
-if os.path.exists(ar_models_dir):
-    app.mount("/ar_models", StaticFiles(directory=ar_models_dir), name="ar_models")
+
+# Custom route for GLB files with proper headers
+@app.get("/ar_models/{filename}")
+async def serve_glb_file(filename: str):
+    file_path = os.path.join(ar_models_dir, filename)
+    if os.path.exists(file_path) and filename.endswith('.glb'):
+        return FileResponse(
+            file_path,
+            media_type="model/gltf-binary",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Cache-Control": "public, max-age=31536000",  # Cache for 1 year
+            }
+        )
+    return {"error": "File not found"}
 
 # ---------------------------
 # Uvicorn entrypoint
