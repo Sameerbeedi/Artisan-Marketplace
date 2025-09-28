@@ -30,7 +30,7 @@ class RecommendationAI:
 # Alternative config for faster responses
 class FastRecommendationAI(RecommendationAI):
     def __init__(self):
-        super().__init__(model_name="gemini-1.5-flash")
+        super().__init__(model_name="gemini-2.5-flash")
 
 
 # Usage example

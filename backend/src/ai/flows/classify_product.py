@@ -23,7 +23,7 @@ async def classify_product(
         b64_image = base64.b64encode(content).decode("utf-8")
 
         # Load Gemini model
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         # Ask Gemini to classify
         result = model.generate_content([

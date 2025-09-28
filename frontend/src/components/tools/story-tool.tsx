@@ -194,9 +194,16 @@ export function StoryTool() {
           arGenerationStatus = 'generating';
           console.log('🎯 Starting AR model generation for painting...');
           
+          // Create FormData to send the image file
+          const formData = new FormData();
+          formData.append('file', values.productImage[0]);
+          
           const arRes = await fetch(
             `${backendBase}/generate_ar_model/${saveData.id}`,
-            { method: 'POST' }
+            {
+              method: 'POST',
+              body: formData
+            }
           );
           
           const arData = await arRes.json();
