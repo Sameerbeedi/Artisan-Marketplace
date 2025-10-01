@@ -91,7 +91,30 @@ export default function ProductARPage() {
       console.log('🎯 Starting AR generation for product:', productId);
       console.log('🖼️ Product image URL:', product?.image_url);
       
-      const res = await fetch(`${backendBase}/generate_ar_model/${productId}`, { method: "POST" });
+      if (!product?.image_url) {
+        throw new Error('No image URL available for this product');
+      }
+      
+      // Fetch the image from the URL and convert to File
+      console.log('📥 Fetching image from URL...');
+      const imageResponse = await fetch(product.image_url);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+      }
+      
+      const imageBlob = await imageResponse.blob();
+      const imageFile = new File([imageBlob], 'product-image.jpg', { type: imageBlob.type || 'image/jpeg' });
+      console.log('✅ Image converted to File:', imageFile.name, imageFile.size, 'bytes');
+      
+      // Send the file to the backend
+      const formData = new FormData();
+      formData.append('file', imageFile);
+      
+      console.log('📤 Sending AR generation request...');
+      const res = await fetch(`${backendBase}/generate_ar_model/${productId}`, { 
+        method: "POST",
+        body: formData
+      });
       
       const data = await res.json();
       console.log('📊 AR generation response:', data);
