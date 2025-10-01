@@ -1,4 +1,5 @@
-from fastapi import APIRouter, UploadFile, Form, HTTPException, Request, Body
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request, Body
+from typing import Optional
 import httpx
 import google.generativeai as genai
 import base64
@@ -330,8 +331,17 @@ async def publish_product(product_id: str, body: dict = Body(...)):
 # AR Model Generation (Blender + Firebase)
 # -----------------------------------
 @router.post("/generate_ar_model/{product_id}")
-async def generate_ar_model(product_id: str, file: UploadFile = None, request: Request = None):
-    if not file:
+async def generate_ar_model(
+    product_id: str,
+    request: Request,
+    file: Optional[UploadFile] = File(None)
+):
+    print(f"📥 AR Generation request for product {product_id}")
+    print(f"📎 File received: {file}")
+    if file:
+        print(f"📎 File details: filename={file.filename}, content_type={file.content_type}")
+    
+    if not file or not file.filename:
         return {"success": False, "error": "No file uploaded"}
 
     # Get product data from Firestore to check if it's a painting

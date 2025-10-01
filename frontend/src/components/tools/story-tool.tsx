@@ -194,28 +194,37 @@ export function StoryTool() {
           arGenerationStatus = 'generating';
           console.log('🎯 Starting AR model generation for painting...');
           
-          // Create FormData to send the image file
-          const formData = new FormData();
-          formData.append('file', values.productImage[0]);
-          
-          const arRes = await fetch(
-            `${backendBase}/generate_ar_model/${saveData.id}`,
-            {
-              method: 'POST',
-              body: formData
-            }
-          );
-          
-          const arData = await arRes.json();
-          console.log('🎨 AR generation response:', arData);
-          
-          if (arData.success && arData.ar_model_url) {
-            arModelUrl = arData.ar_model_url;
-            arGenerationStatus = 'success';
-            console.log('✅ AR model generated successfully:', arModelUrl);
-          } else {
+          // Verify we have the file
+          if (!values.productImage || !values.productImage[0]) {
+            console.error('❌ No image file available for AR generation');
             arGenerationStatus = 'failed';
-            console.warn('⚠️ AR generation failed:', arData.message || 'Unknown error');
+          } else {
+            console.log('📎 Image file available:', values.productImage[0].name, values.productImage[0].size, 'bytes');
+            
+            // Create FormData to send the image file
+            const formData = new FormData();
+            formData.append('file', values.productImage[0]);
+            
+            console.log('📤 Sending AR generation request...');
+            const arRes = await fetch(
+              `${backendBase}/generate_ar_model/${saveData.id}`,
+              {
+                method: 'POST',
+                body: formData
+              }
+            );
+            
+            const arData = await arRes.json();
+            console.log('🎨 AR generation response:', arData);
+            
+            if (arData.success && arData.ar_model_url) {
+              arModelUrl = arData.ar_model_url;
+              arGenerationStatus = 'success';
+              console.log('✅ AR model generated successfully:', arModelUrl);
+            } else {
+              arGenerationStatus = 'failed';
+              console.warn('⚠️ AR generation failed:', arData.error || arData.message || 'Unknown error');
+            }
           }
         } catch (arError) {
           arGenerationStatus = 'failed';
