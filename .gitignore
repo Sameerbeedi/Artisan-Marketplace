@@ -50,12 +50,32 @@ next-env.d.ts
 # genkit
 .genkit/*
 
-# env files (ignore local/private only)
+# env files (ALL environment files with secrets)
+.env
+.env.*
 .env.local
+.env.development
 .env.development.local
+.env.production
 .env.production.local
+.env.test
 .env.test.local
+backend/.env
+backend/.env.*
 backend/env.local
+frontend/.env
+frontend/.env.*
+frontend/.env.local
+frontend/.env.production
+
+# API keys and secrets
+**/firebase_service_account.json
+**/*service-account*.json
+**/*credentials*.json
+*.pem
+*.key
+secrets.json
+secrets.*.json
 
 # firebase
 firebase-debug.log
