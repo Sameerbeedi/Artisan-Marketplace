@@ -32,12 +32,8 @@ app = FastAPI(
 # Add CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://artisan-marketplace-six.vercel.app",
-        "http://localhost:3000",
-        "*"  # Allow all origins as fallback
-    ],
-    allow_credentials=False,  # Avoid '*' with credentials to prevent CORS failures
+    allow_origins=["*"],  # Allow all origins to support Vercel preview deployments
+    allow_credentials=False,  # Must be False when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
