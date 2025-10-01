@@ -104,6 +104,19 @@ async def debug_products():
         "products_store_content": products_store
     }
 
+@router.get("/debug/routes")
+async def debug_routes():
+    """Debug endpoint to check registered routes"""
+    from fastapi import FastAPI
+    routes = []
+    for route in router.routes:
+        routes.append({
+            "path": route.path,
+            "name": route.name,
+            "methods": list(route.methods) if hasattr(route, 'methods') else []
+        })
+    return {"routes": routes, "total": len(routes)}
+
 @router.post("/debug/init-products")
 async def force_init_products():
     """Force initialize mock products"""
