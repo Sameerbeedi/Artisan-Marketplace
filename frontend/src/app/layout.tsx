@@ -38,6 +38,7 @@ export default function RootLayout({
           type="module"
           src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"
           strategy="beforeInteractive"
+          crossOrigin="anonymous"
         />
       </head>
       <body

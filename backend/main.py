@@ -32,10 +32,15 @@ app = FastAPI(
 # Add CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # ⚠️ In production, restrict to your frontend domain
+    allow_origins=[
+        "https://artisan-marketplace-six.vercel.app",
+        "http://localhost:3000",
+        "*"  # Allow all origins as fallback
+    ],
     allow_credentials=False,  # Avoid '*' with credentials to prevent CORS failures
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Import and include routes
@@ -46,11 +51,12 @@ except ImportError:
 
 app.include_router(api_router)
 
-# Static file serving for AR models when Firebase is not available
+# Static file serving for AR models and uploaded images
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 ar_models_dir = os.path.join(os.path.dirname(__file__), "ar_models")
+uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
 
 # Custom route for GLB files with proper headers
 @app.get("/ar_models/{filename}")
@@ -65,6 +71,32 @@ async def serve_glb_file(filename: str):
                 "Access-Control-Allow-Methods": "GET, OPTIONS",
                 "Access-Control-Allow-Headers": "*",
                 "Cache-Control": "public, max-age=31536000",  # Cache for 1 year
+            }
+        )
+    return {"error": "File not found"}
+
+# Custom route for uploaded images with proper headers
+@app.get("/uploads/{filename}")
+async def serve_uploaded_image(filename: str):
+    file_path = os.path.join(uploads_dir, filename)
+    if os.path.exists(file_path):
+        # Determine media type based on file extension
+        media_type = "image/jpeg"
+        if filename.endswith('.png'):
+            media_type = "image/png"
+        elif filename.endswith('.webp'):
+            media_type = "image/webp"
+        elif filename.endswith('.gif'):
+            media_type = "image/gif"
+        
+        return FileResponse(
+            file_path,
+            media_type=media_type,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Cache-Control": "public, max-age=86400",  # Cache for 1 day
             }
         )
     return {"error": "File not found"}

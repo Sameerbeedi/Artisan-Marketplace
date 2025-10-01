@@ -462,6 +462,8 @@ async def generate_with_blender_from_file(product_id: str, file: UploadFile, req
         else:
             print(f"⚠️ Firebase not available. AR model URL: {glb_url}")
 
+        return {"success": True, "ar_model_url": glb_url}
+
     finally:
         # Clean up temporary directory
         try:
@@ -570,3 +572,47 @@ async def get_products():
         })
 
     return products
+
+
+# -----------------------------------
+# Image Upload Endpoint (Firebase-free alternative)
+# -----------------------------------
+@router.post("/upload_image")
+async def upload_image(file: UploadFile, request: Request):
+    """
+    Upload image to backend storage (no Firebase needed)
+    Returns a URL that can be accessed via the backend
+    """
+    try:
+        # Create uploads directory if it doesn't exist
+        uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+        os.makedirs(uploads_dir, exist_ok=True)
+        
+        # Generate unique filename
+        import uuid
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(uploads_dir, unique_filename)
+        
+        # Save file
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # Generate URL
+        host = request.headers.get("host", "localhost:9079")
+        if "onrender.com" in host or "railway.app" in host or "herokuapp.com" in host:
+            backend_url = f"https://{host}"
+        else:
+            backend_url = os.getenv("BACKEND_URL", f"http://{host}")
+        
+        image_url = f"{backend_url}/uploads/{unique_filename}"
+        
+        print(f"✅ Image uploaded: {unique_filename}")
+        print(f"🔗 Image URL: {image_url}")
+        
+        return {"success": True, "imageUrl": image_url, "filename": unique_filename}
+        
+    except Exception as e:
+        print(f"❌ Image upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
