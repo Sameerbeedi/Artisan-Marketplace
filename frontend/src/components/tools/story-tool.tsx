@@ -106,17 +106,20 @@ export function StoryTool() {
     setDraftId(null);
 
     try {
+      // Store the image file reference at the start (it may become unavailable later)
+      const imageFile = values.productImage && values.productImage.length > 0 ? values.productImage[0] : null;
+      
       // ---------- STEP 1: Upload Image to Firebase ----------
       let imageUrl: string | undefined;
-      if (values.productImage && values.productImage.length > 0 && values.productImage[0]) {
-        imageUrl = await uploadImage(values.productImage[0]);
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
       }
 
       // ---------- STEP 2: Classify product ----------
       const formData = new FormData();
       formData.append('productTitle', values.productTitle);
-      if (values.productImage && values.productImage.length > 0 && values.productImage[0]) {
-        formData.append('file', values.productImage[0]);
+      if (imageFile) {
+        formData.append('file', imageFile);
       }
 
       const classifyRes = await fetch(
@@ -195,22 +198,22 @@ export function StoryTool() {
           console.log('🎯 Starting AR model generation for painting...');
           
           // Verify we have the file
-          if (!values.productImage || !values.productImage[0]) {
+          if (!imageFile) {
             console.error('❌ No image file available for AR generation');
             arGenerationStatus = 'failed';
           } else {
-            console.log('📎 Image file available:', values.productImage[0].name, values.productImage[0].size, 'bytes');
+            console.log('📎 Image file available:', imageFile.name, imageFile.size, 'bytes');
             
             // Create FormData to send the image file
-            const formData = new FormData();
-            formData.append('file', values.productImage[0]);
+            const arFormData = new FormData();
+            arFormData.append('file', imageFile);
             
             console.log('📤 Sending AR generation request...');
             const arRes = await fetch(
               `${backendBase}/generate_ar_model/${saveData.id}`,
               {
                 method: 'POST',
-                body: formData
+                body: arFormData
               }
             );
             
