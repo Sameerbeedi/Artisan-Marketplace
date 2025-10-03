@@ -109,6 +109,14 @@ export function StoryTool() {
       // Store the image file reference at the start (it may become unavailable later)
       const imageFile = values.productImage && values.productImage.length > 0 ? values.productImage[0] : null;
       
+      console.log('🔍 Debug - Form values:', {
+        hasProductImage: !!values.productImage,
+        imageArrayLength: values.productImage?.length,
+        imageFile: imageFile,
+        imageFileName: imageFile?.name,
+        imageFileSize: imageFile?.size
+      });
+      
       // ---------- STEP 1: Upload Image to Firebase ----------
       let imageUrl: string | undefined;
       if (imageFile) {
